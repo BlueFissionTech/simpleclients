@@ -1,0 +1,44 @@
+{
+    "name": "bluefission/simpleclients",
+    "description": "Simple Client Wrappers For BlueFission",
+    "license": "MIT",
+    "type": "package",
+    "keywords": ["clients, api, http, services"],
+    "authors": [
+        {
+            "name": "Devon Scott",
+            "email": "dscott@bluefission.com",
+            "homepage": "https://bluefission.com",
+            "role": "Developer"
+        }
+    ],
+    "repositories": [
+        {
+            "type": "vcs",
+            "url": "https://github.com/bluefission/develation"
+        },
+        {
+            "type": "vcs",
+            "url": "https://github.com/bluefission/automata"
+        }
+    ],
+    "minimum-stability": "dev",
+    "require": {
+        "bluefission/develation": "^1.0.0-alpha",
+        "bluefission/automata": "dev-master",
+        "orhanerday/open-ai": "^2.2",
+        "simplehtmldom/simplehtmldom": "^2.0@RC",
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^11.1@dev",
+        "php": ">=8.0.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "BlueFission\\": "src/"
+        },
+        "classmap": [
+           "src/"
+        ]
+    }
+}
