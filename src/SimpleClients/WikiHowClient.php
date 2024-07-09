@@ -6,7 +6,7 @@ use BlueFission\Services\Service;
 
 use simplehtmldom\HtmlWeb;
 
-class WikiHowService extends Service
+class WikiHowClient extends Service
 {
     private $baseUrl = 'https://www.wikihow.com';
 
