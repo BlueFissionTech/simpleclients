@@ -25,10 +25,7 @@
     "minimum-stability": "dev",
     "require": {
         "bluefission/develation": "^1.0.0-alpha",
-        "bluefission/automata": "dev-master",
-        "orhanerday/open-ai": "^2.2",
         "simplehtmldom/simplehtmldom": "^2.0@RC",
-        "google-gemini-php/client": "*"
     },
     "require-dev": {
         "phpunit/phpunit": "^11.1@dev",
