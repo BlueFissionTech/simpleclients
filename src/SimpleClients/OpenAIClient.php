@@ -18,7 +18,7 @@ class OpenAIClient extends Client
 
     public function generate($input, $config = [], callable $callback = null)
     {
-        $this->_client->generate($input, $callback, $config);
+        $this->_client->generate($input, $config, $callback);
     }
 
     /**
@@ -41,6 +41,18 @@ class OpenAIClient extends Client
     public function chat($input, $config = [])
     {
         return $this->_client->chat($input, $config);
+    }
+
+    /**
+     * Alias of chat() to align with Automata IClient signature.
+     *
+     * @param string|array $input
+     * @param array $config
+     * @return array
+     */
+    public function respond($input, $config = [])
+    {
+        return $this->chat($input, $config);
     }
 
     /**

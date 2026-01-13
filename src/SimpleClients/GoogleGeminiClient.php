@@ -2,200 +2,105 @@
 
 namespace BlueFission\SimpleClients;
 
-use Gemini\Gemini;
-use Gemini\Data\{GenerationConfig, SafetySetting};
-use Gemini\Enums\{HarmBlockThreshold, HarmCategory};
+use RuntimeException;
 use BlueFission\Services\Client;
 use BlueFission\Arr;
 
 class GoogleGeminiClient extends Client {
 
-	public function __construct( $apiKey ) {
+	public function __construct( $apiKey, $client = null ) {
 		$this->_apiKey = $apiKey;
-		$this->_client = Gemini::client($this->_apiKey);
+		$this->_client = $client ?? $this->resolveClient();
 	}
 
+    private function resolveClient() {
+    	if (class_exists('\\Gemini')) {
+    		return \Gemini::client($this->_apiKey);
+    	}
+
+    	throw new RuntimeException('Gemini client not available; provide a client instance to the constructor.');
+    }
+
     /**
-     * Get completion based on the input.
-     *
-     * @param string $input
-     * @return array
+     * Generate text from Gemini.
      */
     public function generate($input, $config = []): string
     {
-    	if ( Arr::size($config) > 0 ) {
-    		$this->configPro($config);
-    	}
-
-        $result = $this->_client
-        	->geminiPro()
-        	->generateContent($input);
-        return $result->text();
+    	$input = $this->normalizeInput($input);
+        $result = $this->_client->geminiPro()->generateContent($input, $config);
+        return $this->extractText($result);
     }
 
     /**
-     * Get completion based on the input.
-     *
-     * @param string $input
-     * @return array
+     * Complete text from Gemini.
      */
-    public function streamComplete($input, callable $callback, $config =  []): void
-    {
-    	if ( Arr::size($config) > 0 ) {
-    		$this->configPro($config);
-    	}
-
-        $result = $this->_client
-        	->geminiPro()
-        	->streamGenerateContent($input);
-
-        foreach ($stream as $response) {
-			$callback($response);
-		}
-    }
-
-    public function vision($input, $base64ImageData = null)
-    {
-
-    	if ( Arr::size($config) > 0 ) {
-    		$this->configProVision($config);
-    	}
-
-    	$prompt = [];
-
-    	$prompt[] = $input;
-    	if ($base64ImageData) {
-    		$prompt[] = new Blob(
-				mimeType: MimeType::IMAGE_JPEG,
-				data: $base64ImageData
-			);
-		}
-
-    	$result = $client
-			->geminiProVision()
-			->generateContent($prompt);
-
-		return $result->text();
-    }
-
-    /**
-     * Get chat completion based on the input.
-     *
-     * @param string $input
-     * @return array
-     */
-    public function chat($input, $config = [], $history = [])
-    {
-    	if ( Arr::size($config) > 0 ) {
-    		$this->configPro($config);
-    	}
-
-    	$conversation = [];
-    	
-        $chat = $this->_client->geminiPro();
-        if (Arr::size($history) > 0) {
-    		foreach ($history as $item) {
-    			$message = $item['message'] ?? '';
-    			$role = $item['role'] ?? 0;
-
-    			if ( $message == '' ) {
-					continue;
-				}
-
-    			$conversation[] = Content::parse(part: $item['message'], role: $item['role'] == 0 ? Role::MODEL : null );
-			}
-
-			$this->_client->startChat(history: $conversation);
-		}
-
-		return $chat->sendMessage($input);
-    }
-
-    public function embeddings($input): array
+    public function complete($input, $config = []): string
 	{
-		$response = $this->_client
-		 ->embeddingModel()
-		 ->embedContent($inut);
-
-		 return $response->embedding->values;
+		$input = $this->normalizeInput($input);
+		$result = $this->_client->geminiPro()->generateContent($input, $config);
+		return $this->extractText($result);
 	}
 
-    private function configPro($config) {
+    /**
+     * Chat/Respond with Gemini.
+     */
+	public function chat($input, $config = [], $history = [])
+	{
+		$input = $this->normalizeInput($input);
+		$chat = $this->_client->geminiPro();
 
-    	// Implement this
-    	$safetySettingDangerousContent = new SafetySetting(
-		    category: HarmCategory::HARM_CATEGORY_DANGEROUS_CONTENT,
-		    threshold: HarmBlockThreshold::BLOCK_ONLY_HIGH
-		);
+		if (Arr::size($history) > 0 && method_exists($chat, 'startChat')) {
+			$chat->startChat(history: $history);
+		}
 
-		$safetySettingHateSpeech = new SafetySetting(
-		    category: HarmCategory::HARM_CATEGORY_HATE_SPEECH,
-		    threshold: HarmBlockThreshold::BLOCK_ONLY_HIGH
-		);
+		return $this->extractText($chat->sendMessage($input, $config));
+	}
 
-    	$defaults = [
-    		'max_tokens' => 800,
-    		'stop' => [],
-    		'temperature' => 1,
-    		'top_p' => 0.8,
-    		'top_k' => 10,
-    		'frequency_penalty' => 0,
-    		'presence_penalty' => 0,
-    	];
+	public function respond($input, $config = [], $history = [])
+	{
+		return $this->chat($input, $config, $history);
+	}
 
-    	$config = array_merge($defaults, $config);
+	public function embeddings($input): array
+	{
+		$input = $this->normalizeInput($input);
+		if (!method_exists($this->_client, 'embeddingModel')) {
+			return [];
+		}
 
-		$generationConfig = new GenerationConfig(
-			stopSequences: $config['stop'],
-			maxOutputTokens: $config['max_tokens'],
-			temperature: $config['temperature'],
-			topP: $config['top_p'],
-			topK: $config['top_k']
-		);
+		$response = $this->_client
+		 ->embeddingModel()
+		 ->embedContent($input);
 
-		$this->_client->geminiPro()
-			->withGenerationConfig($generationConfig)
-			->withSafetySetting($safetySettingHateSpeech)
-	 		->withGenerationConfig($generationConfig);
-    }
+		if (is_array($response)) {
+			return $response;
+		}
 
-    private function configProVision($config) {
+		if (is_object($response) && isset($response->embedding->values)) {
+			return (array)$response->embedding->values;
+		}
 
-    	// Implement this
-    	$safetySettingDangerousContent = new SafetySetting(
-		    category: HarmCategory::HARM_CATEGORY_DANGEROUS_CONTENT,
-		    threshold: HarmBlockThreshold::BLOCK_ONLY_HIGH
-		);
+		return [];
+	}
 
-		$safetySettingHateSpeech = new SafetySetting(
-		    category: HarmCategory::HARM_CATEGORY_HATE_SPEECH,
-		    threshold: HarmBlockThreshold::BLOCK_ONLY_HIGH
-		);
+	private function normalizeInput($input) {
+		if (is_object($input) && method_exists($input, 'prompt')) {
+			return $input->prompt();
+		}
 
-    	$defaults = [
-    		'max_tokens' => 800,
-    		'stop' => [],
-    		'temperature' => 1,
-    		'top_p' => 0.8,
-    		'top_k' => 10,
-    		'frequency_penalty' => 0,
-    		'presence_penalty' => 0,
-    	];
+		return $input;
+	}
 
-    	$config = Arr::merge($defaults, $config);
+	private function extractText($response): string
+	{
+		if (is_object($response) && method_exists($response, 'text')) {
+			return (string)$response->text();
+		}
 
-		$generationConfig = new GenerationConfig(
-			stopSequences: $config['stop'],
-			maxOutputTokens: $config['max_tokens'],
-			temperature: $config['temperature'],
-			topP: $config['top_p'],
-			topK: $config['top_k']
-		);
+		if (is_array($response)) {
+			return (string)($response['text'] ?? '');
+		}
 
-		$this->_client->geminiProVision()
-			->withGenerationConfig($generationConfig)
-			->withSafetySetting($safetySettingHateSpeech)
-	 		->withGenerationConfig($generationConfig);
-    }
-
+		return (string)$response;
+	}
 }
