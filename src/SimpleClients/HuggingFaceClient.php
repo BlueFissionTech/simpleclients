@@ -3,15 +3,19 @@
 namespace BlueFission\SimpleClients;
 
 use BlueFission\Services\Service;
+use BlueFission\Str;
 
 class HuggingFaceClient extends Service
 {
     private $baseUrl = 'https://huggingface.co/api';
-    private $apiKey = ''; // Replace with your Hugging Face API key
+    private $apiKey = '';
 
-    public function __construct()
+    public function __construct(?string $apiKey = null, ?string $baseUrl = null)
     {
-        $this->apiKey = env('HUGGING_FACE_API_KEY'); // Replace with your Hugging Face API key
+        if ($baseUrl) {
+            $this->baseUrl = Str::trim($baseUrl, '/');
+        }
+        $this->apiKey = $apiKey ?? $this->getEnv('HUGGING_FACE_API_KEY');
         parent::__construct();
     }
 
@@ -170,5 +174,15 @@ class HuggingFaceClient extends Service
         $context = stream_context_create($options);
         $response = file_get_contents($url, false, $context);
         return json_decode($response, true);
+    }
+
+    private function getEnv(string $key): string
+    {
+        if (function_exists('env')) {
+            return (string)env($key);
+        }
+
+        $value = getenv($key);
+        return $value === false ? '' : (string)$value;
     }
 }

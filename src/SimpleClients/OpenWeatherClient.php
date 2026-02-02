@@ -9,9 +9,9 @@ class OpenWeatherClient extends Service
     private $apiKey;
     private $baseUrl = 'https://api.openweathermap.org/data/2.5/weather';
 
-    public function __construct()
+    public function __construct(?string $apiKey = null)
     {
-        $this->apiKey = env('OPEN_WEATHER_API_KEY');
+        $this->apiKey = $apiKey ?? $this->getEnv('OPEN_WEATHER_API_KEY');
         parent::__construct();
     }
 
@@ -34,5 +34,15 @@ class OpenWeatherClient extends Service
         } else {
             return "Unable to fetch weather data for {$location}.";
         }
+    }
+
+    private function getEnv(string $key): string
+    {
+        if (function_exists('env')) {
+            return (string)env($key);
+        }
+
+        $value = getenv($key);
+        return $value === false ? '' : (string)$value;
     }
 }

@@ -72,7 +72,7 @@ class GoogleGeminiClient extends Client {
 		 ->embeddingModel()
 		 ->embedContent($input);
 
-		if (is_array($response)) {
+		if (Arr::is($response)) {
 			return $response;
 		}
 
@@ -97,7 +97,7 @@ class GoogleGeminiClient extends Client {
 			return (string)$response->text();
 		}
 
-		if (is_array($response)) {
+		if (Arr::is($response)) {
 			return (string)($response['text'] ?? '');
 		}
 

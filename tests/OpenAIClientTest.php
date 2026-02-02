@@ -73,6 +73,22 @@ class OpenAIClientTest extends TestCase
         $this->assertSame($expected, $client->chat($messages, $config));
     }
 
+    public function testRespondAliasesChat(): void
+    {
+        $mock = $this->createMock(OpenAI::class);
+        $messages = [['role' => 'user', 'content' => 'ping']];
+        $expected = ['choices' => [['message' => ['content' => 'pong']]]];
+
+        $mock->expects($this->once())
+            ->method('chat')
+            ->with($messages, [])
+            ->willReturn($expected);
+
+        $client = $this->clientWithMock($mock);
+
+        $this->assertSame($expected, $client->respond($messages));
+    }
+
     public function testEmbeddingsReturnsConnectorResponse(): void
     {
         $mock = $this->createMock(OpenAI::class);

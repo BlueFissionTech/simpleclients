@@ -11,12 +11,12 @@ class TrelloClient extends Service
     private $apiKey;
     private $apiToken;
 
-    public function __construct()
+    public function __construct(?string $apiKey = null, ?string $apiToken = null, $curl = null)
     {
         parent::__construct();
-        $this->apiKey = env('TRELLO_API_KEY');
-        $this->apiToken = env('TRELLO_API_TOKEN');
-        $this->curl = new Curl();
+        $this->apiKey = $apiKey ?? $this->getEnv('TRELLO_API_KEY');
+        $this->apiToken = $apiToken ?? $this->getEnv('TRELLO_API_TOKEN');
+        $this->curl = $curl ?? new Curl();
     }
 
     private function request(string $method, string $url, array $params = [])
@@ -81,5 +81,15 @@ class TrelloClient extends Service
         return $this->request('PUT', "cards/{$cardId}", [
             'idList' => $columnId,
         ]);
+    }
+
+    private function getEnv(string $key): string
+    {
+        if (function_exists('env')) {
+            return (string)env($key);
+        }
+
+        $value = getenv($key);
+        return $value === false ? '' : (string)$value;
     }
 }
