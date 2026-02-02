@@ -3,19 +3,27 @@
 namespace BlueFission\SimpleClients;
 
 use BlueFission\Services\Service;
+use BlueFission\Str;
 
 use simplehtmldom\HtmlWeb;
 
 class WikiHowClient extends Service
 {
     private $baseUrl = 'https://www.wikihow.com';
+    private $htmlWeb;
+
+    public function __construct($htmlWeb = null)
+    {
+        parent::__construct();
+        $this->htmlWeb = $htmlWeb ?? new HtmlWeb();
+    }
 
     public function search(string $query): array
     {
         $url = $this->baseUrl . '/Special:Search?search=' . urlencode($query);
         // $url = $this->baseUrl . 'wikiHowTo?search=' . urlencode($query);
 
-        $html = (new HtmlWeb())->load($url);
+        $html = $this->htmlWeb->load($url);
 
         $results = [];
         foreach ($html->find('.searchresult') as $searchResult) {
@@ -53,7 +61,8 @@ class WikiHowClient extends Service
 
     private function getSteps(string $url): array
     {
-        $html = (new HtmlWeb())->load($this->baseUrl . '/' . $url);
+        $target = (Str::pos($url, 'http') === 0) ? $url : $this->baseUrl . '/' . ltrim($url, '/');
+        $html = $this->htmlWeb->load($target);
         $stepsList = $html->find('.steps_list_2', 0);
         if (!$stepsList) {
             return [];
@@ -87,7 +96,7 @@ class WikiHowClient extends Service
             $stepsAsString .= "{$step['title']}:\n{$step['description']}\n\n";
         }
 
-        return rtrim($stepsAsString);
+        return Str::trim($stepsAsString);
     }
 
 }

@@ -9,12 +9,19 @@ use simplehtmldom\HtmlWeb;
 class DuckDuckGoSearchClient extends Service
 {
     private $baseUrl = 'https://duckduckgo.com/html';
+    private $htmlWeb;
+
+    public function __construct($htmlWeb = null)
+    {
+        parent::__construct();
+        $this->htmlWeb = $htmlWeb ?? new HtmlWeb();
+    }
 
     public function search(string $query): array
     {
         $url = $this->baseUrl . '?q=' . urlencode($query);
 
-        $html = (new HtmlWeb())->load($url);
+        $html = $this->htmlWeb->load($url);
 
         $results = [];
         foreach ($html->find('.result') as $resultElement) {

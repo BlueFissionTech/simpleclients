@@ -2,6 +2,8 @@
 
 namespace BlueFission\SimpleClients;
 
+use BlueFission\Str;
+
 class ClaudeClient
 {
     private string $_apiKey;
@@ -10,7 +12,7 @@ class ClaudeClient
     public function __construct(string $apiKey, string $baseUrl = 'https://api.anthropic.com')
     {
         $this->_apiKey = $apiKey;
-        $this->_baseUrl = rtrim($baseUrl, '/');
+        $this->_baseUrl = Str::trim($baseUrl, '/');
     }
 
     public function generate($input, $config = [], ?callable $callback = null): array

@@ -8,13 +8,13 @@ use BlueFission\Services\Service;
 class GoogleSearchClient extends Service
 {
     private $baseUrl = 'https://www.googleapis.com/customsearch/v1';
-    private $apiKey = ''; // Replace with your Google API key
-    private $searchEngineId = ''; // Replace with your search engine ID
+    private $apiKey = '';
+    private $searchEngineId = '';
 
-    public function  __construct()
+    public function  __construct(?string $apiKey = null, ?string $searchEngineId = null)
     {
-        $this->apiKey = env('GOOGLE_SEARCH_API_ID'); // Replace with your Google API key
-        $this->searchEngineId = env('GOOGLE_SEARCH_ENGINE_ID'); // Replace with your search engine ID
+        $this->apiKey = $apiKey ?? $this->getEnv('GOOGLE_SEARCH_API_ID');
+        $this->searchEngineId = $searchEngineId ?? $this->getEnv('GOOGLE_SEARCH_ENGINE_ID');
         parent::__construct();
     }
 
@@ -46,5 +46,15 @@ class GoogleSearchClient extends Service
         }
 
         return $results;
+    }
+
+    private function getEnv(string $key): string
+    {
+        if (function_exists('env')) {
+            return (string)env($key);
+        }
+
+        $value = getenv($key);
+        return $value === false ? '' : (string)$value;
     }
 }

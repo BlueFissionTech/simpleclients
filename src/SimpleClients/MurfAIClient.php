@@ -11,10 +11,10 @@ class MurfAIClient extends Service
     private $apiKey;
     protected $_curl;
 
-    public function __construct($apiKey)
+    public function __construct(?string $apiKey = null, $curl = null)
     {
-        $this->apiKey = $apiKey;
-        $this->_curl = new Curl([
+        $this->apiKey = $apiKey ?? $this->getEnv('MURF_AI_API_KEY');
+        $this->_curl = $curl ?? new Curl([
             'method' => 'post',
         ]);
 
@@ -38,10 +38,20 @@ class MurfAIClient extends Service
         $this->_curl->config('target', 'https://api.murf.ai/tts');
         $this->_curl->open();
         $this->_curl->query(http_build_query($request_data));
-        $response = $this->_curl->getResult();
+        $response = $this->_curl->result();
         $this->_curl->close();
 
         $responseBody = json_decode($response, true);
         return $responseBody['data']['link'];
+    }
+
+    private function getEnv(string $key): string
+    {
+        if (function_exists('env')) {
+            return (string)env($key);
+        }
+
+        $value = getenv($key);
+        return $value === false ? '' : (string)$value;
     }
 }
