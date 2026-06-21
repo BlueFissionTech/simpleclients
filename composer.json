@@ -3,7 +3,7 @@
     "description": "Simple Client Wrappers For BlueFission",
     "license": "MIT",
     "type": "package",
-    "keywords": ["clients, api, http, services"],
+    "keywords": ["clients", "api", "http", "services"],
     "authors": [
         {
             "name": "Devon Scott",
