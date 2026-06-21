@@ -4,12 +4,15 @@ namespace BlueFission\SimpleClients\Video;
 
 use BlueFission\SimpleClients\Aws\SigV4;
 use BlueFission\SimpleClients\Cloud\HttpClient;
+use BlueFission\SimpleClients\Concerns\ProviderClientHelpers;
 use BlueFission\Arr;
 use BlueFission\Str;
 use BlueFission\Val;
 
 class AnalysisClient
 {
+    use ProviderClientHelpers;
+
     private $http;
     private array $config;
 
@@ -22,7 +25,7 @@ class AnalysisClient
     public function analyze($input, array $config = []): array
     {
         $config = array_merge($this->config, $config);
-        $provider = Str::lower((string)($config['provider'] ?? 'gcp'));
+        $provider = $this->providerName($config);
 
         return match ($provider) {
             'azure' => $this->analyzeAzure($input, $config),
@@ -37,7 +40,7 @@ class AnalysisClient
         $token = $config['token'] ?? null;
         $apiKey = $config['api_key'] ?? null;
 
-        $video = $this->normalizeInput($input);
+        $video = $this->normalizeProviderInput($input);
         $payload = [
             'inputUri' => $video['type'] === 'url' ? $video['value'] : null,
             'features' => $config['features'] ?? ['LABEL_DETECTION'],
@@ -71,7 +74,7 @@ class AnalysisClient
         if (Val::isNotEmpty($config['access_token'] ?? null)) {
             $query['accessToken'] = $config['access_token'];
         }
-        $video = $this->normalizeInput($input);
+        $video = $this->normalizeProviderInput($input);
 
         $headers = [];
         if (Val::isNotEmpty($token)) {
@@ -108,7 +111,7 @@ class AnalysisClient
         $secretKey = $config['secret_key'] ?? null;
         $sessionToken = $config['session_token'] ?? null;
 
-        $video = $this->normalizeInput($input);
+        $video = $this->normalizeProviderInput($input);
         $payload = [
             'Video' => [],
             'MinConfidence' => $config['min_confidence'] ?? 50,
@@ -137,23 +140,6 @@ class AnalysisClient
 
         $response = $this->http->request('POST', $endpoint, $headers, $payload);
         return $this->normalizeAws($response['body']);
-    }
-
-    private function normalizeInput($input): array
-    {
-        if (Arr::is($input) && isset($input['type'], $input['value'])) {
-            return $input;
-        }
-
-        if (Str::is($input) && filter_var($input, FILTER_VALIDATE_URL)) {
-            return ['type' => 'url', 'value' => $input];
-        }
-
-        if (Str::is($input) && is_file($input)) {
-            return ['type' => 'bytes', 'value' => file_get_contents($input)];
-        }
-
-        return ['type' => 'bytes', 'value' => (string)$input];
     }
 
     private function normalizeGcp(string $body): array
@@ -189,10 +175,8 @@ class AnalysisClient
 
     private function errorResponse(string $message): array
     {
-        return [
+        return $this->providerError([
             'labels' => [],
-            'error' => $message,
-            'raw' => [],
-        ];
+        ], $message);
     }
 }
