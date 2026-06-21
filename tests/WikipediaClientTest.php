@@ -36,4 +36,23 @@ class WikipediaClientTest extends TestCase
 
         $this->assertSame('Summary text', $summary);
     }
+
+    public function testGetSummaryHandlesMalformedJson(): void
+    {
+        $client = new WikipediaClient();
+        $topic = 'Broken';
+        $params = [
+            'action' => 'query',
+            'format' => 'json',
+            'prop' => 'extracts',
+            'exintro' => 'true',
+            'explaintext' => 'true',
+            'titles' => $topic,
+        ];
+        $url = 'https://en.wikipedia.org/w/api.php?' . http_build_query($params);
+
+        HttpFixtures::set($url, '{not-json');
+
+        $this->assertSame('No summary found for the given topic.', $client->getSummary($topic));
+    }
 }

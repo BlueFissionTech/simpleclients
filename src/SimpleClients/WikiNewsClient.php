@@ -27,7 +27,7 @@ class WikiNewsClient extends Service
         ];
 
         $url = $this->baseUrl . '?' . http_build_query($params);
-        $response = json_decode(file_get_contents($url), true);
+        $response = HttpJson::get($url);
 
         $headlines = [];
         if (isset($response['query']['search'])) {
