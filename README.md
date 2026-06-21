@@ -1,19 +1,28 @@
 # SimpleClients
 
-SimpleClients is a collection of simple PHP clients for connecting to various third-party services that are frequently used across multiple projects. It leverages the DevElation library (`bluefission/develation`) to utilize as many custom classes, methods, and patterns from that library as possible. The main purpose of SimpleClients is to provide common connectors to the custom framework Blue Fission Opus (`bluefission/opus`) and the PHP-based Workspace Intelligence Shell Environment (WISE) (`bluefission/wise`) without having repeated code or having to maintain the connectors within the respective projects. However, these connectors are generic enough to be used anywhere.
+SimpleClients is a small PHP client library for connecting to provider APIs through reusable, testable client classes. It favors Blue Fission conventions and uses DevElation (`bluefission/develation`) patterns where they keep configuration, service access, and response handling simple.
+
+The package owns provider client boundaries: authentication input, endpoint configuration, request transport, response normalization, error shape, and deterministic test fixtures. Consumers should depend on these general client contracts instead of adding one-off provider code in application layers.
 
 ## Features
 
 SimpleClients currently offers connectors to the following services:
 
+- AWS SigV4 signing
+- Claude
 - DuckDuckGo Search
+- Gemini
 - Google Search
+- Grok
 - IP API Geo Location
 - Hugging Face
 - MurfAI
+- OCR providers
 - OpenAI
 - Open Weather
+- Speech transcription providers
 - Trello
+- Video analysis providers
 - WikiHow
 - Wikipedia
 - Wiki News
@@ -117,6 +126,12 @@ Below is a brief overview of more clients and their methods.
 
 - `search(string $query): array`
   - Searches DuckDuckGo and retrieves results.
+
+## Configuration
+
+Client constructors accept credentials and optional transport/test doubles where supported. Environment helpers are used only as fallback configuration. Do not commit secrets; pass API keys through runtime configuration, environment variables, or secret-management layers outside this package.
+
+See `SPEC.md`, `ARCHITECTURE.md`, and `tests.md` for package scope, client boundaries, and validation commands.
 
 ## Contributing
 
