@@ -4,12 +4,15 @@ namespace BlueFission\SimpleClients\Vision;
 
 use BlueFission\SimpleClients\Aws\SigV4;
 use BlueFission\SimpleClients\Cloud\HttpClient;
+use BlueFission\SimpleClients\Concerns\ProviderClientHelpers;
 use BlueFission\Arr;
 use BlueFission\Str;
 use BlueFission\Val;
 
 class OcrClient
 {
+    use ProviderClientHelpers;
+
     private $http;
     private array $config;
 
@@ -22,7 +25,7 @@ class OcrClient
     public function analyze($input, array $config = []): array
     {
         $config = array_merge($this->config, $config);
-        $provider = Str::lower((string)($config['provider'] ?? 'gcp'));
+        $provider = $this->providerName($config);
 
         return match ($provider) {
             'azure' => $this->analyzeAzure($input, $config),
@@ -81,7 +84,7 @@ class OcrClient
             $url .= (Str::has($url, '?') ? '&' : '?') . http_build_query($query);
         }
 
-        $inputInfo = $this->normalizeInput($input);
+        $inputInfo = $this->normalizeProviderInput($input);
         if ($inputInfo['type'] === 'url') {
             $headers[] = 'Content-Type: application/json';
             $body = ['url' => $inputInfo['value']];
@@ -109,7 +112,7 @@ class OcrClient
                 'Name' => $config['s3_key'],
             ];
         } else {
-            $inputInfo = $this->normalizeInput($input);
+            $inputInfo = $this->normalizeProviderInput($input);
             $document['Bytes'] = base64_encode((string)$inputInfo['value']);
         }
 
@@ -136,7 +139,7 @@ class OcrClient
 
     private function gcpImagePayload($input): array
     {
-        $inputInfo = $this->normalizeInput($input);
+        $inputInfo = $this->normalizeProviderInput($input);
         if ($inputInfo['type'] === 'url') {
             return ['source' => ['imageUri' => $inputInfo['value']]];
         }
@@ -144,26 +147,9 @@ class OcrClient
         return ['content' => base64_encode((string)$inputInfo['value'])];
     }
 
-    private function normalizeInput($input): array
-    {
-        if (Arr::is($input) && isset($input['type'], $input['value'])) {
-            return $input;
-        }
-
-        if (Str::is($input) && filter_var($input, FILTER_VALIDATE_URL)) {
-            return ['type' => 'url', 'value' => $input];
-        }
-
-        if (Str::is($input) && is_file($input)) {
-            return ['type' => 'bytes', 'value' => file_get_contents($input)];
-        }
-
-        return ['type' => 'bytes', 'value' => (string)$input];
-    }
-
     private function normalizeGcp(string $body): array
     {
-        $data = json_decode($body, true) ?? [];
+        $data = $this->providerJson($body);
         $response = $data['responses'][0] ?? [];
         $text = $response['textAnnotations'][0]['description'] ?? '';
         $blocks = [];
@@ -188,7 +174,7 @@ class OcrClient
 
     private function normalizeAzure(string $body): array
     {
-        $data = json_decode($body, true) ?? [];
+        $data = $this->providerJson($body);
         $lines = [];
         foreach (($data['regions'] ?? []) as $region) {
             foreach (($region['lines'] ?? []) as $line) {
@@ -208,7 +194,7 @@ class OcrClient
 
     private function normalizeAws(string $body): array
     {
-        $data = json_decode($body, true) ?? [];
+        $data = $this->providerJson($body);
         $lines = [];
         foreach (($data['Blocks'] ?? []) as $block) {
             if (($block['BlockType'] ?? '') === 'LINE') {
@@ -227,13 +213,11 @@ class OcrClient
 
     private function errorResponse(string $message): array
     {
-        return [
+        return $this->providerError([
             'text' => '',
             'blocks' => [],
             'entities' => [],
             'confidence' => null,
-            'error' => $message,
-            'raw' => [],
-        ];
+        ], $message);
     }
 }

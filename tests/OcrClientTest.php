@@ -33,6 +33,38 @@ class OcrClientTest extends TestCase
         $this->assertArrayHasKey('requests', $http->calls[0]['body']);
     }
 
+    public function testGcpOcrReadsFileInput(): void
+    {
+        $path = tempnam(sys_get_temp_dir(), 'ocr');
+        file_put_contents($path, 'image-file-bytes');
+
+        try {
+            $http = new HttpClientStub();
+            $http->response['body'] = json_encode([
+                'responses' => [
+                    [
+                        'textAnnotations' => [
+                            ['description' => 'File OCR'],
+                        ],
+                    ],
+                ],
+            ]);
+
+            $client = new OcrClient(['provider' => 'gcp'], $http);
+            $result = $client->analyze($path);
+
+            $this->assertSame('File OCR', $result['text']);
+            $this->assertSame(
+                base64_encode('image-file-bytes'),
+                $http->calls[0]['body']['requests'][0]['image']['content']
+            );
+        } finally {
+            if (is_string($path) && is_file($path)) {
+                unlink($path);
+            }
+        }
+    }
+
     public function testAzureOcrUsesUrlPayload(): void
     {
         $http = new HttpClientStub();
