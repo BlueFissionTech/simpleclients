@@ -131,7 +131,7 @@ Below is a brief overview of more clients and their methods.
 
 Client constructors accept credentials and optional transport/test doubles where supported. Environment helpers are used only as fallback configuration. Do not commit secrets; pass API keys through runtime configuration, environment variables, or secret-management layers outside this package.
 
-See `SPEC.md`, `ARCHITECTURE.md`, `PROVIDER_EXTRACTION.md`, and `tests.md` for package scope, client boundaries, provider extraction gates, and validation commands.
+See `SPEC.md`, `ARCHITECTURE.md`, `CLIENT_CONTRACTS.md`, `PROVIDER_EXTRACTION.md`, and `tests.md` for package scope, client boundaries, reusable contract shapes, provider extraction gates, and validation commands.
 
 ## Contributing
 

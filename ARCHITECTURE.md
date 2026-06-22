@@ -4,6 +4,7 @@
 
 - `src/SimpleClients/` contains public provider clients.
 - `src/SimpleClients/Cloud/HttpClient.php` provides an injectable HTTP boundary for newer provider clients.
+- `src/SimpleClients/Contracts/` defines reusable config, request, response, capability, and generic client contracts.
 - `src/SimpleClients/Aws/SigV4.php` signs AWS-style requests.
 - `src/SimpleClients/Vision`, `src/SimpleClients/Speech`, and `src/SimpleClients/Video` contain provider-family clients with shared response expectations.
 - `tests/` mirrors the public client surfaces with offline fixtures and test doubles.
@@ -25,6 +26,7 @@ A SimpleClients client should own:
 - Transport call dispatch.
 - Provider response parsing.
 - Error response normalization.
+- Capability metadata when the client needs a generic integration boundary.
 
 A SimpleClients client should not own:
 
@@ -42,5 +44,7 @@ Third-party provider SDKs should be avoided unless they materially reduce risk o
 ## Testing Strategy
 
 The default suite is offline and deterministic. Tests should use fixtures, stubs, or injected transports rather than live provider calls. Optional live checks belong outside the default suite and must document required environment variables.
+
+See `CLIENT_CONTRACTS.md` for the reusable contract objects and example provider-family shapes.
 
 Provider-family extraction notes live in `PROVIDER_EXTRACTION.md`. That document should be updated before adding DNS, registrar, or hosted-mail clients so implementation remains package-owned and workflow-neutral.

@@ -17,7 +17,7 @@ class GeoLocationClient extends Service
     {
         $ip = $_SERVER['REMOTE_ADDR'];
         $url = $this->baseUrl."/{$ip}";
-        $response = json_decode(file_get_contents($url), true);
+        $response = HttpJson::get($url);
 
         if (isset($response['city'])) {
             $cityState = $response['city'];

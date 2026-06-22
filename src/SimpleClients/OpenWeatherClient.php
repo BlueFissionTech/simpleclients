@@ -24,7 +24,7 @@ class OpenWeatherClient extends Service
         ];
 
         $url = $this->baseUrl . '?' . http_build_query($params);
-        $response = json_decode(file_get_contents($url), true);
+        $response = HttpJson::get($url);
 
         if (isset($response['main'], $response['weather'][0])) {
             $temperature = $response['main']['temp'];

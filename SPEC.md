@@ -12,6 +12,7 @@ The core scope is:
 - Response and error normalization.
 - Provider capability metadata where useful.
 - Deterministic unit fixtures for client behavior.
+- Reusable config, request, response, and capability contract objects for clients that need a generic integration boundary.
 
 SimpleClients may grow when a provider need is general enough to fit these boundaries. New clients should not be tied to a single consuming project, local workflow, or private deployment shape.
 
@@ -30,6 +31,7 @@ SimpleClients may grow when a provider need is general enough to fit these bound
 - Provider-specific behavior is isolated to the owning client or a small shared helper.
 - Shared helpers stay lean and remove real duplication rather than introducing a broad framework.
 - Upstream package constraints are documented when they shape implementation.
+- Generic client contracts remain additive and do not force all direct clients through a common runtime path.
 
 ## External Integrations
 

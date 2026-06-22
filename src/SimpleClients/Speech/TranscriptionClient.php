@@ -4,12 +4,15 @@ namespace BlueFission\SimpleClients\Speech;
 
 use BlueFission\SimpleClients\Aws\SigV4;
 use BlueFission\SimpleClients\Cloud\HttpClient;
+use BlueFission\SimpleClients\Concerns\ProviderClientHelpers;
 use BlueFission\Arr;
 use BlueFission\Str;
 use BlueFission\Val;
 
 class TranscriptionClient
 {
+    use ProviderClientHelpers;
+
     private $http;
     private array $config;
 
@@ -22,7 +25,7 @@ class TranscriptionClient
     public function transcribe($input, array $config = []): array
     {
         $config = array_merge($this->config, $config);
-        $provider = Str::lower((string)($config['provider'] ?? 'gcp'));
+        $provider = $this->providerName($config);
 
         return match ($provider) {
             'azure' => $this->transcribeAzure($input, $config),
@@ -37,7 +40,7 @@ class TranscriptionClient
         $token = $config['token'] ?? null;
         $apiKey = $config['api_key'] ?? null;
 
-        $audio = $this->normalizeInput($input);
+        $audio = $this->normalizeProviderInput($input);
         $payload = [
             'config' => $config['gcp_config'] ?? ['languageCode' => 'en-US'],
             'audio' => $audio['type'] === 'url'
@@ -80,7 +83,7 @@ class TranscriptionClient
             $url .= (Str::has($url, '?') ? '&' : '?') . http_build_query($query);
         }
 
-        $audio = $this->normalizeInput($input);
+        $audio = $this->normalizeProviderInput($input);
         if ($audio['type'] === 'url') {
             return $this->errorResponse('Azure v1 transcription expects raw audio bytes; provide file bytes or use presigned download then pass bytes.');
         }
@@ -99,7 +102,7 @@ class TranscriptionClient
 
         $mediaUri = $config['media_uri'] ?? null;
         if (!$mediaUri) {
-            $audio = $this->normalizeInput($input);
+            $audio = $this->normalizeProviderInput($input);
             if ($audio['type'] === 'url') {
                 $mediaUri = $audio['value'];
             }
@@ -132,26 +135,9 @@ class TranscriptionClient
         return $this->normalizeAws($response['body']);
     }
 
-    private function normalizeInput($input): array
-    {
-        if (Arr::is($input) && isset($input['type'], $input['value'])) {
-            return $input;
-        }
-
-        if (Str::is($input) && filter_var($input, FILTER_VALIDATE_URL)) {
-            return ['type' => 'url', 'value' => $input];
-        }
-
-        if (Str::is($input) && is_file($input)) {
-            return ['type' => 'bytes', 'value' => file_get_contents($input)];
-        }
-
-        return ['type' => 'bytes', 'value' => (string)$input];
-    }
-
     private function normalizeGcp(string $body): array
     {
-        $data = json_decode($body, true) ?? [];
+        $data = $this->providerJson($body);
         $results = $data['results'][0]['alternatives'][0] ?? [];
 
         return [
@@ -164,7 +150,7 @@ class TranscriptionClient
 
     private function normalizeAzure(string $body): array
     {
-        $data = json_decode($body, true);
+        $data = $this->providerJsonValue($body);
         if (!Arr::is($data)) {
             return ['text' => Str::trim($body), 'confidence' => null, 'segments' => [], 'raw' => $body];
         }
@@ -179,7 +165,7 @@ class TranscriptionClient
 
     private function normalizeAws(string $body): array
     {
-        $data = json_decode($body, true) ?? [];
+        $data = $this->providerJson($body);
         $job = $data['TranscriptionJob'] ?? [];
 
         return [
@@ -192,12 +178,10 @@ class TranscriptionClient
 
     private function errorResponse(string $message): array
     {
-        return [
+        return $this->providerError([
             'text' => '',
             'confidence' => null,
             'segments' => [],
-            'error' => $message,
-            'raw' => [],
-        ];
+        ], $message);
     }
 }

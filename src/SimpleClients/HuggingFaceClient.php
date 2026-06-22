@@ -28,20 +28,7 @@ class HuggingFaceClient extends Service
 
         $url = $this->baseUrl . $endpoint;
 
-        $options = [
-            'http' => [
-                'method' => $method,
-                'header' => implode("\r\n", $headers),
-            ],
-        ];
-
-        if (!empty($data) && $method !== 'GET') {
-            $options['http']['content'] = json_encode($data);
-        }
-
-        $context = stream_context_create($options);
-        $response = file_get_contents($url, false, $context);
-        return json_decode($response, true);
+        return HttpJson::request($method, $url, $headers, $data);
     }
 
     public function hasApiKey(): bool
@@ -160,20 +147,7 @@ class HuggingFaceClient extends Service
 
         $url = $spaceUrl . $endpoint;
 
-        $options = [
-            'http' => [
-                'method' => $method,
-                'header' => implode("\r\n", $headers),
-            ],
-        ];
-
-        if (!empty($data) && $method !== 'GET') {
-            $options['http']['content'] = json_encode($data);
-        }
-
-        $context = stream_context_create($options);
-        $response = file_get_contents($url, false, $context);
-        return json_decode($response, true);
+        return HttpJson::request($method, $url, $headers, $data);
     }
 
     private function getEnv(string $key): string
