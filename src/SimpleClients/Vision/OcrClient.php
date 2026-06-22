@@ -149,7 +149,7 @@ class OcrClient
 
     private function normalizeGcp(string $body): array
     {
-        $data = json_decode($body, true) ?? [];
+        $data = $this->providerJson($body);
         $response = $data['responses'][0] ?? [];
         $text = $response['textAnnotations'][0]['description'] ?? '';
         $blocks = [];
@@ -174,7 +174,7 @@ class OcrClient
 
     private function normalizeAzure(string $body): array
     {
-        $data = json_decode($body, true) ?? [];
+        $data = $this->providerJson($body);
         $lines = [];
         foreach (($data['regions'] ?? []) as $region) {
             foreach (($region['lines'] ?? []) as $line) {
@@ -194,7 +194,7 @@ class OcrClient
 
     private function normalizeAws(string $body): array
     {
-        $data = json_decode($body, true) ?? [];
+        $data = $this->providerJson($body);
         $lines = [];
         foreach (($data['Blocks'] ?? []) as $block) {
             if (($block['BlockType'] ?? '') === 'LINE') {

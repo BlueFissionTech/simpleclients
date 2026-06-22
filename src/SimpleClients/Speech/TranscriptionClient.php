@@ -137,7 +137,7 @@ class TranscriptionClient
 
     private function normalizeGcp(string $body): array
     {
-        $data = json_decode($body, true) ?? [];
+        $data = $this->providerJson($body);
         $results = $data['results'][0]['alternatives'][0] ?? [];
 
         return [
@@ -150,7 +150,7 @@ class TranscriptionClient
 
     private function normalizeAzure(string $body): array
     {
-        $data = json_decode($body, true);
+        $data = $this->providerJsonValue($body);
         if (!Arr::is($data)) {
             return ['text' => Str::trim($body), 'confidence' => null, 'segments' => [], 'raw' => $body];
         }
@@ -165,7 +165,7 @@ class TranscriptionClient
 
     private function normalizeAws(string $body): array
     {
-        $data = json_decode($body, true) ?? [];
+        $data = $this->providerJson($body);
         $job = $data['TranscriptionJob'] ?? [];
 
         return [

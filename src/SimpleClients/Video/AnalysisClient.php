@@ -144,7 +144,7 @@ class AnalysisClient
 
     private function normalizeGcp(string $body): array
     {
-        $data = json_decode($body, true) ?? [];
+        $data = $this->providerJson($body);
         return [
             'labels' => $data['annotationResults'][0]['segmentLabelAnnotations'] ?? [],
             'raw' => $data,
@@ -153,7 +153,7 @@ class AnalysisClient
 
     private function normalizeAzure(string $body): array
     {
-        $data = json_decode($body, true);
+        $data = $this->providerJsonValue($body);
         if (!Arr::is($data)) {
             return ['labels' => [], 'raw' => $body];
         }
@@ -166,7 +166,7 @@ class AnalysisClient
 
     private function normalizeAws(string $body): array
     {
-        $data = json_decode($body, true) ?? [];
+        $data = $this->providerJson($body);
         return [
             'labels' => $data['Labels'] ?? [],
             'raw' => $data,
