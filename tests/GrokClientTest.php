@@ -5,27 +5,82 @@ declare(strict_types=1);
 namespace BlueFission\SimpleClients\Tests;
 
 use BlueFission\SimpleClients\GrokClient;
+use BlueFission\SimpleClients\Tests\Support\HttpClientStub;
 use PHPUnit\Framework\TestCase;
 
 class GrokClientTest extends TestCase
 {
-    public function testCompleteReturnsMockMessage(): void
+    public function testCompleteCallsChatCompletionsApiWithInjectedTransport(): void
     {
-        $client = new GrokClient('key', 'https://api.grok.test');
-        $response = $client->complete('Sample prompt', ['temperature' => 0.2]);
+        $transport = new HttpClientStub();
+        $transport->response['body'] = json_encode([
+            'choices' => [
+                [
+                    'message' => [
+                        'role' => 'assistant',
+                        'content' => 'Grok fixture answer',
+                    ],
+                ],
+            ],
+        ]);
 
-        $this->assertArrayHasKey('message', $response);
-        $this->assertStringContainsString('Sample prompt', $response['message']);
-        $this->assertSame(['temperature' => 0.2], $response['config']);
-        $this->assertSame('https://api.grok.test', $response['base_url']);
+        $client = new GrokClient('key', 'https://api.x.test', $transport);
+        $response = $client->complete('Sample prompt', [
+            'model' => 'grok-test',
+            'temperature' => 0.2,
+            'headers' => ['X-Trace-Id' => 'trace-2'],
+        ]);
+
+        $this->assertSame('Grok fixture answer', $response['message']);
+        $this->assertSame(200, $response['status']);
+        $this->assertSame('', $response['error']);
+        $this->assertSame('POST', $transport->calls[0]['method']);
+        $this->assertSame('https://api.x.test/v1/chat/completions', $transport->calls[0]['url']);
+        $this->assertSame('Bearer key', $transport->calls[0]['headers']['Authorization']);
+        $this->assertSame('trace-2', $transport->calls[0]['headers']['X-Trace-Id']);
+
+        $payload = json_decode($transport->calls[0]['body'], true);
+        $this->assertSame('grok-test', $payload['model']);
+        $this->assertSame(0.2, $payload['temperature']);
+        $this->assertSame('Sample prompt', $payload['messages'][0]['content']);
+        $this->assertArrayNotHasKey('headers', $payload);
     }
 
     public function testRespondAliasesComplete(): void
     {
-        $client = new GrokClient('key');
+        $transport = new HttpClientStub();
+        $transport->response['body'] = json_encode([
+            'choices' => [
+                [
+                    'message' => [
+                        'content' => 'Chat response',
+                    ],
+                ],
+            ],
+        ]);
+
+        $client = new GrokClient('key', 'https://api.x.test', $transport);
         $response = $client->respond('Chat here');
 
-        $this->assertArrayHasKey('message', $response);
-        $this->assertStringContainsString('Chat here', $response['message']);
+        $this->assertSame('Chat response', $response['message']);
+    }
+
+    public function testErrorResponsesAreReturnedWithoutThrowing(): void
+    {
+        $transport = new HttpClientStub();
+        $transport->response = [
+            'status' => 401,
+            'body' => json_encode([
+                'error' => ['message' => 'invalid api key'],
+            ]),
+            'headers' => [],
+        ];
+
+        $client = new GrokClient('key', 'https://api.x.test', $transport);
+        $response = $client->complete('Prompt');
+
+        $this->assertSame(401, $response['status']);
+        $this->assertSame('invalid api key', $response['error']);
+        $this->assertSame('', $response['message']);
     }
 }
