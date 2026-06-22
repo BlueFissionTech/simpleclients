@@ -5,12 +5,15 @@ namespace BlueFission\SimpleClients\Contracts;
 use BlueFission\Arr;
 use BlueFission\Behavioral\Behaviors\State;
 use BlueFission\Func;
+use BlueFission\IVal;
 use BlueFission\Obj;
 use BlueFission\Str;
 use BlueFission\Val;
 
 abstract class ContractObject extends Obj
 {
+    protected $_exposeValueObject = true;
+
     private array $memberConstraints = [];
 
     public function __construct(array $values = [])
@@ -60,6 +63,9 @@ abstract class ContractObject extends Obj
     protected function memberValue(string $field, mixed $fallback = null): mixed
     {
         $value = $this->field($field);
+        if ($value instanceof IVal) {
+            $value = $value->val();
+        }
 
         return $value ?? $fallback;
     }
@@ -95,13 +101,13 @@ abstract class ContractObject extends Obj
     private function prepareContractField(string $field, mixed $default): void
     {
         $member = new Val($default);
+        $this->_data[$field] = $member;
+
         $constraint = $this->memberConstraints[$field] ?? null;
 
         if (Func::isCallable($constraint)) {
-            $member->_constraint($constraint);
+            $this->field($field)->constraint($constraint);
         }
-
-        $this->_data[$field] = $member;
     }
 
     private function setContractField(string $field, mixed $value): void
