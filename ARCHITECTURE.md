@@ -46,3 +46,5 @@ Third-party provider SDKs should be avoided unless they materially reduce risk o
 The default suite is offline and deterministic. Tests should use fixtures, stubs, or injected transports rather than live provider calls. Optional live checks belong outside the default suite and must document required environment variables.
 
 See `CLIENT_CONTRACTS.md` for the reusable contract objects and example provider-family shapes.
+
+Provider-family extraction notes live in `PROVIDER_EXTRACTION.md`. That document should be updated before adding DNS, registrar, or hosted-mail clients so implementation remains package-owned and workflow-neutral.

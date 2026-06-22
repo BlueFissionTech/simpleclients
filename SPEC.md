@@ -37,6 +37,8 @@ SimpleClients may grow when a provider need is general enough to fit these bound
 
 SimpleClients includes direct clients or helpers for search, knowledge/content APIs, LLM providers, weather/location APIs, task-board APIs, OCR, transcription, video analysis, and AWS request signing.
 
+DNS and email-provider clients may be added when their auth, config, actions, response shapes, and fixture strategy are reusable across applications. See `PROVIDER_EXTRACTION.md` for the extraction review gates.
+
 Provider integrations should define:
 
 - Required credentials and optional config keys.
