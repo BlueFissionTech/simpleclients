@@ -28,6 +28,7 @@ class GrokClientTest extends TestCase
         $response = $client->complete('Sample prompt', [
             'model' => 'grok-test',
             'temperature' => 0.2,
+            'headers' => ['X-Trace-Id' => 'trace-2'],
         ]);
 
         $this->assertSame('Grok fixture answer', $response['message']);
@@ -36,11 +37,13 @@ class GrokClientTest extends TestCase
         $this->assertSame('POST', $transport->calls[0]['method']);
         $this->assertSame('https://api.x.test/v1/chat/completions', $transport->calls[0]['url']);
         $this->assertSame('Bearer key', $transport->calls[0]['headers']['Authorization']);
+        $this->assertSame('trace-2', $transport->calls[0]['headers']['X-Trace-Id']);
 
         $payload = json_decode($transport->calls[0]['body'], true);
         $this->assertSame('grok-test', $payload['model']);
         $this->assertSame(0.2, $payload['temperature']);
         $this->assertSame('Sample prompt', $payload['messages'][0]['content']);
+        $this->assertArrayNotHasKey('headers', $payload);
     }
 
     public function testRespondAliasesComplete(): void

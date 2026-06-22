@@ -97,13 +97,18 @@ class ClaudeClient
     private function headers(array $config): array
     {
         $headers = $config['headers'] ?? [];
-        $headers = Arr::is($headers) ? $headers : [];
-
-        return array_merge([
+        $headers = Arr::is($headers) ? Arr::make($headers)->toArray() : [];
+        $resolved = Arr::make([
             'Content-Type' => 'application/json',
             'x-api-key' => $this->_apiKey,
             'anthropic-version' => (string)($config['anthropic_version'] ?? '2023-06-01'),
-        ], $headers);
+        ])->toArray();
+
+        foreach ($headers as $name => $value) {
+            $resolved[$name] = $value;
+        }
+
+        return $resolved;
     }
 
     private function extractText(array $response): string

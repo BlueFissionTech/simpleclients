@@ -96,12 +96,17 @@ class GrokClient
     private function headers(array $config): array
     {
         $headers = $config['headers'] ?? [];
-        $headers = Arr::is($headers) ? $headers : [];
-
-        return array_merge([
+        $headers = Arr::is($headers) ? Arr::make($headers)->toArray() : [];
+        $resolved = Arr::make([
             'Authorization' => 'Bearer ' . $this->_apiKey,
             'Content-Type' => 'application/json',
-        ], $headers);
+        ])->toArray();
+
+        foreach ($headers as $name => $value) {
+            $resolved[$name] = $value;
+        }
+
+        return $resolved;
     }
 
     private function extractText(array $response): string

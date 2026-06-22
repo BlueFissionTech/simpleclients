@@ -23,6 +23,7 @@ class ClaudeClientTest extends TestCase
         $response = $client->complete('Hello world', [
             'model' => 'claude-test',
             'max_tokens' => 50,
+            'headers' => ['X-Trace-Id' => 'trace-1'],
         ]);
 
         $this->assertSame('Claude fixture answer', $response['completion']);
@@ -32,11 +33,13 @@ class ClaudeClientTest extends TestCase
         $this->assertSame('https://api.anthropic.test/v1/messages', $transport->calls[0]['url']);
         $this->assertSame('key', $transport->calls[0]['headers']['x-api-key']);
         $this->assertSame('2023-06-01', $transport->calls[0]['headers']['anthropic-version']);
+        $this->assertSame('trace-1', $transport->calls[0]['headers']['X-Trace-Id']);
 
         $payload = json_decode($transport->calls[0]['body'], true);
         $this->assertSame('claude-test', $payload['model']);
         $this->assertSame(50, $payload['max_tokens']);
         $this->assertSame('Hello world', $payload['messages'][0]['content']);
+        $this->assertArrayNotHasKey('headers', $payload);
     }
 
     public function testRespondAliasesComplete(): void
