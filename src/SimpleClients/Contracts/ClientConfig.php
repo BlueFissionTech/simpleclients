@@ -2,43 +2,46 @@
 
 namespace BlueFission\SimpleClients\Contracts;
 
-use BlueFission\Arr;
-use BlueFission\Obj;
-
-class ClientConfig extends Obj
+class ClientConfig extends ContractObject
 {
-    public function __construct(array $values = [])
+    protected function memberDefaults(): array
     {
-        parent::__construct();
+        return [
+            'auth' => [],
+            'base_url' => '',
+            'headers' => [],
+            'options' => [],
+        ];
+    }
 
-        $auth = $values['auth'] ?? [];
-        $headers = $values['headers'] ?? [];
-        $options = $values['options'] ?? [];
-
-        $this->_data['auth'] = Arr::is($auth) ? $auth : [];
-        $this->_data['base_url'] = (string)($values['base_url'] ?? '');
-        $this->_data['headers'] = Arr::is($headers) ? $headers : [];
-        $this->_data['options'] = Arr::is($options) ? $options : [];
+    protected function memberConstraints(): array
+    {
+        return [
+            'auth' => $this->arrayConstraint(),
+            'base_url' => $this->stringConstraint(),
+            'headers' => $this->arrayConstraint(),
+            'options' => $this->arrayConstraint(),
+        ];
     }
 
     public function auth(): array
     {
-        return Arr::is($this->_data['auth'] ?? []) ? $this->_data['auth'] : [];
+        return $this->arrayMember('auth');
     }
 
     public function baseUrl(): string
     {
-        return (string)($this->_data['base_url'] ?? '');
+        return $this->stringMember('base_url');
     }
 
     public function headers(): array
     {
-        return Arr::is($this->_data['headers'] ?? []) ? $this->_data['headers'] : [];
+        return $this->arrayMember('headers');
     }
 
     public function options(): array
     {
-        return Arr::is($this->_data['options'] ?? []) ? $this->_data['options'] : [];
+        return $this->arrayMember('options');
     }
 
     public function toArray(): array

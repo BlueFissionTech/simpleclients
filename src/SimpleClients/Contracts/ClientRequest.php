@@ -2,46 +2,49 @@
 
 namespace BlueFission\SimpleClients\Contracts;
 
-use BlueFission\Arr;
-use BlueFission\Obj;
-use BlueFission\Str;
-
-class ClientRequest extends Obj
+class ClientRequest extends ContractObject
 {
-    public function __construct(array $values = [])
+    protected function memberDefaults(): array
     {
-        parent::__construct();
+        return [
+            'method' => 'GET',
+            'url' => '',
+            'headers' => [],
+            'query' => [],
+            'body' => null,
+            'options' => [],
+        ];
+    }
 
-        $headers = $values['headers'] ?? [];
-        $query = $values['query'] ?? [];
-        $options = $values['options'] ?? [];
-
-        $this->_data['method'] = Str::upper((string)($values['method'] ?? 'GET'));
-        $this->_data['url'] = (string)($values['url'] ?? '');
-        $this->_data['headers'] = Arr::is($headers) ? $headers : [];
-        $this->_data['query'] = Arr::is($query) ? $query : [];
-        $this->_data['body'] = $values['body'] ?? null;
-        $this->_data['options'] = Arr::is($options) ? $options : [];
+    protected function memberConstraints(): array
+    {
+        return [
+            'method' => $this->upperStringConstraint('GET'),
+            'url' => $this->stringConstraint(),
+            'headers' => $this->arrayConstraint(),
+            'query' => $this->arrayConstraint(),
+            'options' => $this->arrayConstraint(),
+        ];
     }
 
     public function method(): string
     {
-        return (string)($this->_data['method'] ?? 'GET');
+        return $this->stringMember('method', 'GET');
     }
 
     public function url(): string
     {
-        return (string)($this->_data['url'] ?? '');
+        return $this->stringMember('url');
     }
 
     public function headers(): array
     {
-        return Arr::is($this->_data['headers'] ?? []) ? $this->_data['headers'] : [];
+        return $this->arrayMember('headers');
     }
 
     public function query(): array
     {
-        return Arr::is($this->_data['query'] ?? []) ? $this->_data['query'] : [];
+        return $this->arrayMember('query');
     }
 
     public function body()
@@ -51,7 +54,7 @@ class ClientRequest extends Obj
 
     public function options(): array
     {
-        return Arr::is($this->_data['options'] ?? []) ? $this->_data['options'] : [];
+        return $this->arrayMember('options');
     }
 
     public function toArray(): array

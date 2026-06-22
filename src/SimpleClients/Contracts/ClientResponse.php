@@ -2,24 +2,28 @@
 
 namespace BlueFission\SimpleClients\Contracts;
 
-use BlueFission\Arr;
-use BlueFission\Obj;
-
-class ClientResponse extends Obj
+class ClientResponse extends ContractObject
 {
-    public function __construct(array $values = [])
+    protected function memberDefaults(): array
     {
-        parent::__construct();
+        return [
+            'status' => 0,
+            'headers' => [],
+            'body' => null,
+            'data' => null,
+            'error' => '',
+            'meta' => [],
+        ];
+    }
 
-        $headers = $values['headers'] ?? [];
-        $meta = $values['meta'] ?? [];
-
-        $this->_data['status'] = (int)($values['status'] ?? 0);
-        $this->_data['headers'] = Arr::is($headers) ? $headers : [];
-        $this->_data['body'] = $values['body'] ?? null;
-        $this->_data['data'] = $values['data'] ?? null;
-        $this->_data['error'] = (string)($values['error'] ?? '');
-        $this->_data['meta'] = Arr::is($meta) ? $meta : [];
+    protected function memberConstraints(): array
+    {
+        return [
+            'status' => $this->intConstraint(),
+            'headers' => $this->arrayConstraint(),
+            'error' => $this->stringConstraint(),
+            'meta' => $this->arrayConstraint(),
+        ];
     }
 
     public static function success($data = null, int $status = 200, array $meta = []): self
@@ -47,12 +51,12 @@ class ClientResponse extends Obj
 
     public function status(): int
     {
-        return (int)($this->_data['status'] ?? 0);
+        return $this->intMember('status');
     }
 
     public function headers(): array
     {
-        return Arr::is($this->_data['headers'] ?? []) ? $this->_data['headers'] : [];
+        return $this->arrayMember('headers');
     }
 
     public function body()
@@ -67,12 +71,12 @@ class ClientResponse extends Obj
 
     public function error(): string
     {
-        return (string)($this->_data['error'] ?? '');
+        return $this->stringMember('error');
     }
 
     public function meta(): array
     {
-        return Arr::is($this->_data['meta'] ?? []) ? $this->_data['meta'] : [];
+        return $this->arrayMember('meta');
     }
 
     public function toArray(): array
