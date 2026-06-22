@@ -38,4 +38,12 @@ class WikiNewsClientTest extends TestCase
         $this->assertCount(2, $results);
         $this->assertSame('News 1', $results[0]['title']);
     }
+
+    public function testGetHeadlinesHandlesEmptyResponse(): void
+    {
+        $client = new WikiNewsClient();
+        $results = $client->getHeadlines('missing fixture');
+
+        $this->assertSame([], $results);
+    }
 }

@@ -22,8 +22,8 @@ class WikipediaClient extends Service
 
         $url = $this->baseUrl . '?' . http_build_query($params);
 
-        $response = json_decode(file_get_contents($url), true);
-        $pages = $response['query']['pages'];
+        $response = HttpJson::get($url);
+        $pages = $response['query']['pages'] ?? [];
 
         foreach ($pages as $page) {
             if (isset($page['extract'])) {
