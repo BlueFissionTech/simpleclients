@@ -62,6 +62,28 @@ class ClientContractsTest extends TestCase
         $this->assertSame(['api_key'], $capabilities->auth());
     }
 
+    public function testContractMembersConstrainUnexpectedShapes(): void
+    {
+        $config = new ClientConfig([
+            'auth' => 'token',
+            'headers' => false,
+            'options' => 'fast',
+        ]);
+
+        $request = new ClientRequest([
+            'method' => 'post',
+            'headers' => 'application/json',
+            'query' => 'page=1',
+        ]);
+
+        $this->assertSame([], $config->auth());
+        $this->assertSame([], $config->headers());
+        $this->assertSame([], $config->options());
+        $this->assertSame('POST', $request->method());
+        $this->assertSame([], $request->headers());
+        $this->assertSame([], $request->query());
+    }
+
     public function testInterfaceSupportsAReusableClientBoundary(): void
     {
         $client = new class implements ClientInterface {

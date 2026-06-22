@@ -49,7 +49,7 @@ class ClientRequest extends ContractObject
 
     public function body()
     {
-        return $this->_data['body'] ?? null;
+        return $this->memberValue('body');
     }
 
     public function options(): array

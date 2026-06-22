@@ -61,12 +61,12 @@ class ClientResponse extends ContractObject
 
     public function body()
     {
-        return $this->_data['body'] ?? null;
+        return $this->memberValue('body');
     }
 
     public function data(): mixed
     {
-        return $this->_data['data'] ?? null;
+        return $this->memberValue('data');
     }
 
     public function error(): string

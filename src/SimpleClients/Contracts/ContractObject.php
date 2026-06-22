@@ -4,8 +4,10 @@ namespace BlueFission\SimpleClients\Contracts;
 
 use BlueFission\Arr;
 use BlueFission\Behavioral\Behaviors\State;
+use BlueFission\Func;
 use BlueFission\Obj;
 use BlueFission\Str;
+use BlueFission\Val;
 
 abstract class ContractObject extends Obj
 {
@@ -15,11 +17,15 @@ abstract class ContractObject extends Obj
     {
         parent::__construct();
 
+        $this->perform(State::CHANGING);
         $this->memberConstraints = $this->memberConstraints();
 
-        $this->perform(State::CHANGING);
         foreach ($this->memberDefaults() as $field => $default) {
-            $this->setContractField($field, $values[$field] ?? $default);
+            $this->prepareContractField($field, $default);
+
+            if (array_key_exists($field, $values)) {
+                $this->setContractField($field, $values[$field]);
+            }
         }
         $this->halt(State::CHANGING);
     }
@@ -36,49 +42,70 @@ abstract class ContractObject extends Obj
 
     protected function arrayMember(string $field, array $fallback = []): array
     {
-        $value = $this->_data[$field] ?? $fallback;
+        $value = $this->memberValue($field, $fallback);
 
         return Arr::is($value) ? $value : $fallback;
     }
 
     protected function stringMember(string $field, string $fallback = ''): string
     {
-        return (string)($this->_data[$field] ?? $fallback);
+        return (string)$this->memberValue($field, $fallback);
     }
 
     protected function intMember(string $field, int $fallback = 0): int
     {
-        return (int)($this->_data[$field] ?? $fallback);
+        return (int)$this->memberValue($field, $fallback);
+    }
+
+    protected function memberValue(string $field, mixed $fallback = null): mixed
+    {
+        $value = $this->field($field);
+
+        return $value ?? $fallback;
     }
 
     protected function arrayConstraint(array $fallback = []): callable
     {
-        return static fn ($value): array => Arr::is($value) ? $value : $fallback;
+        return static function (&$value) use ($fallback): void {
+            $value = Arr::is($value) ? $value : $fallback;
+        };
     }
 
     protected function stringConstraint(): callable
     {
-        return static fn ($value): string => (string)$value;
+        return static function (&$value): void {
+            $value = (string)$value;
+        };
     }
 
     protected function upperStringConstraint(string $fallback = ''): callable
     {
-        return static fn ($value): string => Str::upper((string)($value ?? $fallback));
+        return static function (&$value) use ($fallback): void {
+            $value = Str::upper((string)($value ?? $fallback));
+        };
     }
 
     protected function intConstraint(): callable
     {
-        return static fn ($value): int => (int)$value;
+        return static function (&$value): void {
+            $value = (int)$value;
+        };
+    }
+
+    private function prepareContractField(string $field, mixed $default): void
+    {
+        $member = new Val($default);
+        $constraint = $this->memberConstraints[$field] ?? null;
+
+        if (Func::isCallable($constraint)) {
+            $member->_constraint($constraint);
+        }
+
+        $this->_data[$field] = $member;
     }
 
     private function setContractField(string $field, mixed $value): void
     {
-        $constraint = $this->memberConstraints[$field] ?? null;
-
-        if (is_callable($constraint)) {
-            $value = $constraint($value);
-        }
-
-        $this->_data[$field] = $value;
+        $this->field($field, $value);
     }
 }
