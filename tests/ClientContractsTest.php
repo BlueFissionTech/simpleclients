@@ -9,6 +9,7 @@ use BlueFission\SimpleClients\Contracts\ClientConfig;
 use BlueFission\SimpleClients\Contracts\ClientInterface;
 use BlueFission\SimpleClients\Contracts\ClientRequest;
 use BlueFission\SimpleClients\Contracts\ClientResponse;
+use BlueFission\SimpleClients\Contracts\OptionalDependency;
 use BlueFission\SimpleClients\Contracts\ProviderConfig;
 use PHPUnit\Framework\TestCase;
 
@@ -164,5 +165,31 @@ class ClientContractsTest extends TestCase
             'method' => 'POST',
             'url' => '/messages',
         ], $response->data());
+    }
+
+    public function testOptionalDependencyReportsAvailabilityAndInstallHint(): void
+    {
+        $available = OptionalDependency::forClass(
+            'bluefission/develation',
+            ClientResponse::class,
+            'contract responses'
+        );
+
+        $missing = OptionalDependency::forClass(
+            'vendor/missing-sdk',
+            'Vendor\\Missing\\Client',
+            'missing provider',
+            'composer require vendor/missing-sdk'
+        );
+
+        $this->assertTrue($available->available());
+        $this->assertSame('', $available->message());
+        $this->assertFalse($missing->available());
+        $this->assertSame(
+            'missing provider: requires optional package: vendor/missing-sdk: composer require vendor/missing-sdk',
+            $missing->message()
+        );
+        $this->assertSame('missing provider', $missing->toArray()['capability']);
+        $this->assertFalse($missing->toArray()['available']);
     }
 }
