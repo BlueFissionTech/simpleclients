@@ -9,6 +9,7 @@ use BlueFission\SimpleClients\Contracts\ClientConfig;
 use BlueFission\SimpleClients\Contracts\ClientInterface;
 use BlueFission\SimpleClients\Contracts\ClientRequest;
 use BlueFission\SimpleClients\Contracts\ClientResponse;
+use BlueFission\SimpleClients\Contracts\ProviderCapabilityMap;
 use PHPUnit\Framework\TestCase;
 
 class ClientContractsTest extends TestCase
@@ -124,5 +125,22 @@ class ClientContractsTest extends TestCase
             'method' => 'POST',
             'url' => '/messages',
         ], $response->data());
+    }
+
+    public function testProviderCapabilityMapReturnsStableCapabilities(): void
+    {
+        $ocr = ProviderCapabilityMap::get('OCR');
+        $unknown = ProviderCapabilityMap::get('custom-provider');
+        $all = ProviderCapabilityMap::all();
+
+        $this->assertSame('ocr', $ocr->service());
+        $this->assertContains('analyze', $ocr->actions());
+        $this->assertContains('aws_sigv4', $ocr->auth());
+        $this->assertContains('provider', $ocr->config());
+        $this->assertSame('custom-provider', $unknown->service());
+        $this->assertSame(['http'], $unknown->transports());
+        $this->assertArrayHasKey('claude', $all);
+        $this->assertArrayHasKey('speech', $all);
+        $this->assertSame('speech', $all['speech']->service());
     }
 }
