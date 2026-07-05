@@ -6,6 +6,7 @@ use BlueFission\Arr;
 use BlueFission\Connections\IO;
 use BlueFission\Func;
 use BlueFission\Net\HTTP;
+use BlueFission\Num;
 use BlueFission\Str;
 use BlueFission\Val;
 
@@ -41,14 +42,14 @@ class HttpJson
         if (Func::isCallable($fetcher)) {
             $response = $fetcher($method, $url, $headers, $body);
 
-            return is_string($response) ? $response : '';
+            return Str::is($response) ? $response : '';
         }
 
         $method = Str::upper($method);
         if (self::canUseIoFetch($method, $headers, $body)) {
             $response = IO::fetch($url);
 
-            return is_string($response) ? $response : '';
+            return Str::is($response) ? $response : '';
         }
 
         $options = [
@@ -68,14 +69,14 @@ class HttpJson
 
         $response = @file_get_contents($url, false, stream_context_create($options));
 
-        return is_string($response) ? $response : '';
+        return Str::is($response) ? $response : '';
     }
 
     private static function headerString(array $headers): string
     {
         $lines = [];
         foreach ($headers as $name => $value) {
-            $lines[] = is_int($name) ? (string)$value : self::headerLine((string)$name, (string)$value);
+            $lines[] = Num::isInt($name) ? (string)$value : self::headerLine((string)$name, (string)$value);
         }
 
         return Arr::make($lines)->join("\r\n")->val();
