@@ -86,6 +86,9 @@ class ClientContractsTest extends TestCase
         $this->assertSame(['accepted' => true], $http->data());
         $this->assertSame(['accepted' => true], $http->body());
         $this->assertSame(['X-Trace' => 'abc'], $http->headers());
+        $this->assertSame(201, $http->toNetResponse()->getStatusCode());
+        $this->assertSame(['X-Trace' => 'abc'], $http->toNetResponse()->getHeaders());
+        $this->assertSame(['accepted' => true], $http->toServiceResponse()->data);
     }
 
     public function testContractMembersConstrainUnexpectedShapes(): void

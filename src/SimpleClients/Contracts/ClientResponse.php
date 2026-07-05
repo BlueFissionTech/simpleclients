@@ -3,6 +3,8 @@
 namespace BlueFission\SimpleClients\Contracts;
 
 use BlueFission\Arr;
+use BlueFission\Net\Response as NetResponse;
+use BlueFission\Services\Response as ServiceResponse;
 use BlueFission\Val;
 
 class ClientResponse extends ContractObject
@@ -103,6 +105,19 @@ class ClientResponse extends ContractObject
     public function meta(): array
     {
         return $this->arrayMember('meta');
+    }
+
+    public function toNetResponse(): NetResponse
+    {
+        return new NetResponse($this->status(), $this->headers(), $this->body());
+    }
+
+    public function toServiceResponse(): ServiceResponse
+    {
+        $response = new ServiceResponse();
+        $response->fill($this->toArray());
+
+        return $response;
     }
 
     public function toArray(): array
