@@ -87,6 +87,37 @@ class OcrClientTest extends TestCase
         $this->assertSame(['url' => 'https://example.com/image.png'], $http->calls[0]['body']);
     }
 
+    public function testAzureOcrMergesRuntimeConfigAndBuildsQuery(): void
+    {
+        $http = new HttpClientStub();
+        $http->response['body'] = json_encode([
+            'regions' => [
+                [
+                    'lines' => [
+                        ['words' => [['text' => 'Merged'], ['text' => 'OCR']]],
+                    ],
+                ],
+            ],
+        ]);
+
+        $client = new OcrClient([
+            'provider' => 'azure',
+            'endpoint' => 'https://azure.example.com',
+            'api_key' => 'key',
+            'query' => ['language' => 'en'],
+        ], $http);
+
+        $result = $client->analyze('image-bytes', [
+            'query' => ['language' => 'fr'],
+            'detect_orientation' => 'true',
+        ]);
+
+        $this->assertSame('Merged OCR', $result['text']);
+        $this->assertStringContainsString('language=fr', $http->calls[0]['url']);
+        $this->assertStringContainsString('detectOrientation=true', $http->calls[0]['url']);
+        $this->assertContains('Ocp-Apim-Subscription-Key: key', $http->calls[0]['headers']);
+    }
+
     public function testAwsOcrRequiresCredentials(): void
     {
         $http = new HttpClientStub();

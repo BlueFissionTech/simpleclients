@@ -26,7 +26,7 @@ abstract class ContractObject extends Obj
         foreach ($this->memberDefaults() as $field => $default) {
             $this->prepareContractField($field, $default);
 
-            if (array_key_exists($field, $values)) {
+            if (Arr::hasKey($values, $field)) {
                 $this->setContractField($field, $values[$field]);
             }
         }
@@ -67,7 +67,7 @@ abstract class ContractObject extends Obj
             $value = $value->val();
         }
 
-        return $value ?? $fallback;
+        return Val::isNull($value) ? $fallback : $value;
     }
 
     protected function arrayConstraint(array $fallback = []): callable

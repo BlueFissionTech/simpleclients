@@ -3,6 +3,7 @@
 namespace BlueFission\SimpleClients\Aws;
 
 use BlueFission\Arr;
+use BlueFission\Net\HTTP;
 use BlueFission\Str;
 use BlueFission\Val;
 
@@ -25,7 +26,7 @@ class SigV4
         $amzDate = $amzDate ?? gmdate('Ymd\\THis\\Z');
         $dateStamp = Str::sub($amzDate, 0, 8);
 
-        $parts = parse_url($url);
+        $parts = HTTP::urlParts($url) ?? [];
         $host = $parts['host'] ?? '';
         $path = $parts['path'] ?? '/';
         $query = $parts['query'] ?? '';
@@ -43,22 +44,22 @@ class SigV4
         $canonicalUri = $this->canonicalUri($path);
         $payloadHash = hash('sha256', $body);
 
-        $canonicalRequest = implode("\n", [
+        $canonicalRequest = Arr::make([
             $method,
             $canonicalUri,
             $canonicalQuery,
             $canonicalHeaders,
             $signedHeaders,
             $payloadHash,
-        ]);
+        ])->join("\n")->val();
 
         $credentialScope = $dateStamp . '/' . $region . '/' . $service . '/aws4_request';
-        $stringToSign = implode("\n", [
+        $stringToSign = Arr::make([
             'AWS4-HMAC-SHA256',
             $amzDate,
             $credentialScope,
             hash('sha256', $canonicalRequest),
-        ]);
+        ])->join("\n")->val();
 
         $signingKey = $this->signingKey($secretKey, $dateStamp, $region, $service);
         $signature = hash_hmac('sha256', $stringToSign, $signingKey);
@@ -81,7 +82,7 @@ class SigV4
         $normalized = [];
         foreach ($headers as $name => $value) {
             $key = Str::lower(Str::trim((string)$name));
-            $normalized[$key] = Str::trim(Arr::is($value) ? implode(',', $value) : (string)$value);
+            $normalized[$key] = Str::trim(Arr::is($value) ? Arr::make($value)->join(',')->val() : (string)$value);
         }
         return $normalized;
     }
@@ -97,20 +98,20 @@ class SigV4
 
     private function signedHeaders(array $headers): string
     {
-        $keys = array_keys($headers);
+        $keys = Arr::make($headers)->keys()->val();
         sort($keys);
-        return implode(';', $keys);
+        return Arr::make($keys)->join(';')->val();
     }
 
     private function canonicalHeaders(array $headers): string
     {
-        $keys = array_keys($headers);
+        $keys = Arr::make($headers)->keys()->val();
         sort($keys);
         $lines = [];
         foreach ($keys as $key) {
             $lines[] = $key . ':' . preg_replace('/\s+/', ' ', (string)$headers[$key]);
         }
-        return implode("\n", $lines) . "\n";
+        return Arr::make($lines)->join("\n")->val() . "\n";
     }
 
     private function canonicalQuery(string $query): string
@@ -133,18 +134,22 @@ class SigV4
         }
 
         sort($pairs);
-        return implode('&', $pairs);
+        return Arr::make($pairs)->join('&')->val();
     }
 
     private function canonicalUri(string $path): string
     {
-        $segments = array_map('rawurlencode', explode('/', $path));
-        return implode('/', $segments);
+        $segments = Str::make($path)
+            ->split('/')
+            ->map(fn ($segment) => rawurlencode($segment))
+            ->toArray();
+
+        return Arr::make($segments)->join('/')->val();
     }
 
     private function encode(string $value): string
     {
-        return str_replace('%7E', '~', rawurlencode($value));
+        return Str::replace(rawurlencode($value), '%7E', '~');
     }
 
     private function signingKey(string $secretKey, string $dateStamp, string $region, string $service): string

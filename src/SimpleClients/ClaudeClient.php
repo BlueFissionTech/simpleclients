@@ -3,11 +3,15 @@
 namespace BlueFission\SimpleClients;
 
 use BlueFission\Arr;
+use BlueFission\SimpleClients\Concerns\ProviderClientHelpers;
 use BlueFission\SimpleClients\Cloud\HttpClient;
 use BlueFission\Str;
+use BlueFission\Val;
 
 class ClaudeClient
 {
+    use ProviderClientHelpers;
+
     private string $_apiKey;
     private string $_baseUrl;
     private $_client;
@@ -36,12 +40,11 @@ class ClaudeClient
             'POST',
             $this->_baseUrl . '/v1/messages',
             $this->headers($config),
-            json_encode($this->payload($input, $config))
+            $this->providerEncode($this->payload($input, $config))
         );
 
         $body = (string)($response['body'] ?? '');
-        $decoded = json_decode($body, true);
-        $decoded = Arr::is($decoded) ? $decoded : [];
+        $decoded = $this->providerJson($body);
         $status = (int)($response['status'] ?? 0);
 
         return [
@@ -59,15 +62,6 @@ class ClaudeClient
         return $this->complete($input, $config);
     }
 
-    private function normalizeInput($input): string
-    {
-        if (is_object($input) && method_exists($input, 'prompt')) {
-            return (string)$input->prompt();
-        }
-
-        return (string)$input;
-    }
-
     private function payload($input, array $config): array
     {
         $payload = $config;
@@ -82,14 +76,20 @@ class ClaudeClient
 
     private function messages($input): array
     {
-        if (Arr::is($input) && isset($input[0]) && Arr::is($input[0]) && isset($input[0]['role'], $input[0]['content'])) {
+        if (
+            Arr::is($input)
+            && Arr::hasKey($input, 0)
+            && Arr::is($input[0])
+            && Arr::hasKey($input[0], 'role')
+            && Arr::hasKey($input[0], 'content')
+        ) {
             return $input;
         }
 
         return [
             [
                 'role' => 'user',
-                'content' => $this->normalizeInput($input),
+                'content' => $this->providerPrompt($input),
             ],
         ];
     }
@@ -117,13 +117,13 @@ class ClaudeClient
         if (Arr::is($content)) {
             $parts = [];
             foreach ($content as $item) {
-                if (Arr::is($item) && isset($item['text'])) {
+                if (Arr::is($item) && Arr::hasKey($item, 'text')) {
                     $parts[] = (string)$item['text'];
                 }
             }
 
             if (Arr::size($parts) > 0) {
-                return implode('', $parts);
+                return $this->providerJoin($parts, '');
             }
         }
 
@@ -137,7 +137,7 @@ class ClaudeClient
         }
 
         $error = $response['error'] ?? [];
-        if (Arr::is($error) && isset($error['message'])) {
+        if (Arr::is($error) && Arr::hasKey($error, 'message') && Val::isNotEmpty($error['message'])) {
             return (string)$error['message'];
         }
 

@@ -3,7 +3,10 @@
 namespace BlueFission\SimpleClients;
 
 use BlueFission\Services\Service;
+use BlueFission\Arr;
+use BlueFission\Net\HTTP;
 use BlueFission\Str;
+use BlueFission\Val;
 
 use simplehtmldom\HtmlWeb;
 
@@ -20,8 +23,7 @@ class WikiHowClient extends Service
 
     public function search(string $query): array
     {
-        $url = $this->baseUrl . '/Special:Search?search=' . urlencode($query);
-        // $url = $this->baseUrl . 'wikiHowTo?search=' . urlencode($query);
+        $url = $this->baseUrl . '/Special:Search?' . HTTP::query(['search' => $query]);
 
         $html = $this->htmlWeb->load($url);
 
@@ -38,7 +40,7 @@ class WikiHowClient extends Service
                 'title' => $title,
                 'description' => $description,
                 'rating' => $rating,
-                'url' => $articleUrl, // Add the full URL to the result
+                'url' => $articleUrl,
                 'steps' => $steps
             ];
         }
@@ -49,10 +51,10 @@ class WikiHowClient extends Service
     private function extractRating($searchResult): float
     {
         $ratingElement = $searchResult->find('.search_rating_bar span', 0);
-        if ($ratingElement) {
+        if (Val::isNotEmpty($ratingElement)) {
             $style = $ratingElement->style;
-            preg_match('/width:(\d+(\.\d+)?)%/', $style, $matches);
-            if (isset($matches[1])) {
+            $matches = Str::make((string)$style)->matchPattern('/width:(\d+(\.\d+)?)%/');
+            if (Val::isNotNull($matches) && Arr::hasKey($matches, 1)) {
                 return (float)$matches[1] / 20; // Convert percentage to a rating out of 5
             }
         }
@@ -61,10 +63,10 @@ class WikiHowClient extends Service
 
     private function getSteps(string $url): array
     {
-        $target = (Str::pos($url, 'http') === 0) ? $url : $this->baseUrl . '/' . ltrim($url, '/');
+        $target = Str::startsWith($url, 'http') ? $url : $this->baseUrl . '/' . Str::trim($url, '/');
         $html = $this->htmlWeb->load($target);
         $stepsList = $html->find('.steps_list_2', 0);
-        if (!$stepsList) {
+        if (Val::isEmpty($stepsList)) {
             return [];
         }
 
@@ -73,7 +75,7 @@ class WikiHowClient extends Service
             $titleElement = $step->find('.step_num', 0);
             $descriptionElement = $step->find('.step', 0);
 
-            if ($titleElement && $descriptionElement) {
+            if (Val::isNotEmpty($titleElement) && Val::isNotEmpty($descriptionElement)) {
                 $steps[] = [
                     'title' => $titleElement->plaintext,
                     'description' => $descriptionElement->plaintext
@@ -87,7 +89,7 @@ class WikiHowClient extends Service
     private function getStepsAsString(string $url): string
     {
         $steps = $this->getSteps($url);
-        if (empty($steps)) {
+        if (Val::isEmpty($steps)) {
             return '';
         }
 

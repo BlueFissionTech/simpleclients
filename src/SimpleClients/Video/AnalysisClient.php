@@ -24,7 +24,7 @@ class AnalysisClient
 
     public function analyze($input, array $config = []): array
     {
-        $config = array_merge($this->config, $config);
+        $config = $this->providerConfig($this->config, $config);
         $provider = $this->providerName($config);
 
         return match ($provider) {
@@ -54,7 +54,7 @@ class AnalysisClient
         if (Val::isNotEmpty($token)) {
             $headers[] = 'Authorization: Bearer ' . $token;
         } elseif (Val::isNotEmpty($apiKey)) {
-            $endpoint .= (Str::has($endpoint, '?') ? '&' : '?') . 'key=' . urlencode($apiKey);
+            $endpoint = $this->providerAppendParam($endpoint, 'key', $apiKey);
         }
 
         $response = $this->http->request('POST', $endpoint, $headers, $payload);
@@ -83,13 +83,11 @@ class AnalysisClient
             $headers[] = 'Ocp-Apim-Subscription-Key: ' . $apiKey;
         }
 
-        if (Val::isEmpty($accountId) && !isset($config['path'])) {
+        if (Val::isEmpty($accountId) && !Arr::hasKey($config, 'path')) {
             return $this->errorResponse('Azure Video Indexer requires account_id or explicit path.');
         }
 
-        if (Arr::isNotEmpty($query)) {
-            $url .= (Str::has($url, '?') ? '&' : '?') . http_build_query($query);
-        }
+        $url = $this->providerAppendQuery($url, $query);
 
         $payload = [];
         if ($video['type'] === 'url') {
@@ -133,7 +131,7 @@ class AnalysisClient
 
         if (Val::isNotEmpty($accessKey) && Val::isNotEmpty($secretKey)) {
             $signer = new SigV4();
-            $headers = $signer->sign('POST', $endpoint, $headers, json_encode($payload), $region, 'rekognition', $accessKey, $secretKey, $sessionToken);
+            $headers = $signer->sign('POST', $endpoint, $headers, $this->providerEncode($payload), $region, 'rekognition', $accessKey, $secretKey, $sessionToken);
         } else {
             return $this->errorResponse('AWS credentials required for Rekognition.');
         }
@@ -146,7 +144,7 @@ class AnalysisClient
     {
         $data = $this->providerJson($body);
         return [
-            'labels' => $data['annotationResults'][0]['segmentLabelAnnotations'] ?? [],
+            'labels' => $this->providerPath($data, 'annotationResults.0.segmentLabelAnnotations', []),
             'raw' => $data,
         ];
     }
@@ -159,7 +157,7 @@ class AnalysisClient
         }
 
         return [
-            'labels' => $data['videos'] ?? [],
+            'labels' => $this->providerPath($data, 'videos', []),
             'raw' => $data,
         ];
     }
@@ -168,7 +166,7 @@ class AnalysisClient
     {
         $data = $this->providerJson($body);
         return [
-            'labels' => $data['Labels'] ?? [],
+            'labels' => $this->providerPath($data, 'Labels', []),
             'raw' => $data,
         ];
     }

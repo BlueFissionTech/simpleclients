@@ -3,7 +3,10 @@
 // GoogleSearchService.php
 namespace BlueFission\SimpleClients;
 
+use BlueFission\Arr;
+use BlueFission\Net\HTTP;
 use BlueFission\Services\Service;
+use BlueFission\Val;
 
 class GoogleSearchClient extends Service
 {
@@ -20,7 +23,7 @@ class GoogleSearchClient extends Service
 
     public function hasApiKey(): bool
     {
-        return !empty($this->apiKey);
+        return Val::isNotEmpty($this->apiKey);
     }
 
     public function search(string $query): array
@@ -31,12 +34,13 @@ class GoogleSearchClient extends Service
             'q' => $query,
         ];
 
-        $url = $this->baseUrl . '?' . http_build_query($params);
+        $url = $this->baseUrl . '?' . HTTP::query($params);
         $response = HttpJson::get($url);
 
         $results = [];
-        if (isset($response['items'])) {
-            foreach ($response['items'] as $item) {
+        $items = Arr::make($response)->getPath('items', []);
+        if (Arr::isNotEmpty($items)) {
+            foreach ($items as $item) {
                 $results[] = [
                     'title' => $item['title'],
                     'snippet' => $item['snippet'],

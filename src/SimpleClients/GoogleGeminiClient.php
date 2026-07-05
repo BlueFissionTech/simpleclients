@@ -4,9 +4,12 @@ namespace BlueFission\SimpleClients;
 
 use RuntimeException;
 use BlueFission\Services\Client;
+use BlueFission\SimpleClients\Concerns\ProviderClientHelpers;
 use BlueFission\Arr;
+use BlueFission\Val;
 
 class GoogleGeminiClient extends Client {
+	use ProviderClientHelpers;
 
 	public function __construct( $apiKey, $client = null ) {
 		$this->_apiKey = $apiKey;
@@ -76,7 +79,7 @@ class GoogleGeminiClient extends Client {
 			return $response;
 		}
 
-		if (is_object($response) && isset($response->embedding->values)) {
+		if (is_object($response) && Val::isNotNull($response->embedding->values ?? null)) {
 			return (array)$response->embedding->values;
 		}
 
@@ -85,7 +88,7 @@ class GoogleGeminiClient extends Client {
 
 	private function normalizeInput($input) {
 		if (is_object($input) && method_exists($input, 'prompt')) {
-			return $input->prompt();
+			return $this->providerPrompt($input);
 		}
 
 		return $input;

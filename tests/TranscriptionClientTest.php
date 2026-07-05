@@ -38,6 +38,32 @@ class TranscriptionClientTest extends TestCase
         $this->assertArrayHasKey('error', $result);
     }
 
+    public function testAzureTranscriptionMergesConfigAndBuildsQuery(): void
+    {
+        $http = new HttpClientStub();
+        $http->response['body'] = json_encode([
+            'DisplayText' => 'Azure transcript',
+            'NBest' => [['Display' => 'Azure transcript']],
+        ]);
+
+        $client = new TranscriptionClient([
+            'provider' => 'azure',
+            'endpoint' => 'https://speech.example.com',
+            'api_key' => 'speech-key',
+            'query' => ['language' => 'en-US'],
+        ], $http);
+
+        $result = $client->transcribe('audio-bytes', [
+            'query' => ['profanity' => 'masked'],
+            'language' => 'fr-FR',
+        ]);
+
+        $this->assertSame('Azure transcript', $result['text']);
+        $this->assertStringContainsString('profanity=masked', $http->calls[0]['url']);
+        $this->assertStringContainsString('language=fr-FR', $http->calls[0]['url']);
+        $this->assertContains('Ocp-Apim-Subscription-Key: speech-key', $http->calls[0]['headers']);
+    }
+
     public function testAwsTranscriptionSignsRequest(): void
     {
         $http = new HttpClientStub();
