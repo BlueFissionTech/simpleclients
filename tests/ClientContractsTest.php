@@ -9,6 +9,7 @@ use BlueFission\SimpleClients\Contracts\ClientConfig;
 use BlueFission\SimpleClients\Contracts\ClientInterface;
 use BlueFission\SimpleClients\Contracts\ClientRequest;
 use BlueFission\SimpleClients\Contracts\ClientResponse;
+use BlueFission\SimpleClients\Contracts\ProviderConfig;
 use PHPUnit\Framework\TestCase;
 
 class ClientContractsTest extends TestCase
@@ -82,6 +83,33 @@ class ClientContractsTest extends TestCase
         $this->assertSame('POST', $request->method());
         $this->assertSame([], $request->headers());
         $this->assertSame([], $request->query());
+    }
+
+    public function testProviderConfigUsesContractObjectConstraints(): void
+    {
+        $config = new ProviderConfig([
+            'provider' => 'azure',
+            'endpoint' => 'https://provider.example',
+            'auth' => ['api_key' => 'key'],
+            'headers' => 'bad-headers',
+            'query' => ['language' => 'en-US'],
+            'options' => false,
+        ]);
+
+        $this->assertSame('azure', $config->provider());
+        $this->assertSame('https://provider.example', $config->endpoint());
+        $this->assertSame(['api_key' => 'key'], $config->auth());
+        $this->assertSame([], $config->headers());
+        $this->assertSame(['language' => 'en-US'], $config->query());
+        $this->assertSame([], $config->options());
+        $this->assertSame([
+            'provider' => 'azure',
+            'endpoint' => 'https://provider.example',
+            'auth' => ['api_key' => 'key'],
+            'headers' => [],
+            'query' => ['language' => 'en-US'],
+            'options' => [],
+        ], $config->toArray());
     }
 
     public function testInterfaceSupportsAReusableClientBoundary(): void
