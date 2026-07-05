@@ -2,6 +2,9 @@
 
 namespace BlueFission\SimpleClients\Contracts;
 
+use BlueFission\Arr;
+use BlueFission\Val;
+
 class ProviderConfig extends ContractObject
 {
     protected function memberDefaults(): array
@@ -56,6 +59,29 @@ class ProviderConfig extends ContractObject
     public function options(): array
     {
         return $this->arrayMember('options');
+    }
+
+    public function config($config = null, $value = null): mixed
+    {
+        if (Val::isNull($config)) {
+            return $this->toArray();
+        }
+
+        if (Arr::is($config)) {
+            foreach ($config as $field => $fieldValue) {
+                $this->field((string)$field, $fieldValue);
+            }
+
+            return $this;
+        }
+
+        if (func_num_args() > 1) {
+            $this->field((string)$config, $value);
+
+            return $this;
+        }
+
+        return $this->memberValue((string)$config);
     }
 
     public function toArray(): array

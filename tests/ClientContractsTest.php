@@ -110,6 +110,18 @@ class ClientContractsTest extends TestCase
             'query' => ['language' => 'en-US'],
             'options' => [],
         ], $config->toArray());
+
+        $config
+            ->config('endpoint', 'https://next.example')
+            ->config([
+                'headers' => ['Accept' => 'application/json'],
+                'options' => 'invalid-options',
+            ]);
+
+        $this->assertSame('https://next.example', $config->config('endpoint'));
+        $this->assertSame(['Accept' => 'application/json'], $config->headers());
+        $this->assertSame([], $config->options());
+        $this->assertSame('azure', $config->config()['provider']);
     }
 
     public function testInterfaceSupportsAReusableClientBoundary(): void
