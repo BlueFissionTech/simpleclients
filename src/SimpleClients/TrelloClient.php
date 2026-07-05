@@ -2,6 +2,8 @@
 
 namespace BlueFission\SimpleClients;
 
+use BlueFission\Arr;
+use BlueFission\Net\HTTP;
 use BlueFission\Services\Service;
 use BlueFission\Connections\Curl;
 
@@ -21,10 +23,10 @@ class TrelloClient extends Service
 
     private function request(string $method, string $url, array $params = [])
     {
-        $params = array_merge([
+        $params = Arr::make([
             'key' => $this->apiKey,
             'token' => $this->apiToken,
-        ], $params);
+        ])->merge($params)->toArray();
 
         $this->curl->config([
             'target' => 'https://api.trello.com/1/' . $url,
@@ -36,7 +38,7 @@ class TrelloClient extends Service
         $response = $this->curl->result();
         $this->curl->close();
 
-        return json_decode($response, true);
+        return HTTP::jsonDecode((string)$response, true, []);
     }
 
     public function listBoards()

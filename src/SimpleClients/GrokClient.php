@@ -3,11 +3,15 @@
 namespace BlueFission\SimpleClients;
 
 use BlueFission\Arr;
+use BlueFission\SimpleClients\Concerns\ProviderClientHelpers;
 use BlueFission\SimpleClients\Cloud\HttpClient;
 use BlueFission\Str;
+use BlueFission\Val;
 
 class GrokClient
 {
+    use ProviderClientHelpers;
+
     private string $_apiKey;
     private string $_baseUrl;
     private $_client;
@@ -36,12 +40,11 @@ class GrokClient
             'POST',
             $this->_baseUrl . '/v1/chat/completions',
             $this->headers($config),
-            json_encode($this->payload($input, $config))
+            $this->providerEncode($this->payload($input, $config))
         );
 
         $body = (string)($response['body'] ?? '');
-        $decoded = json_decode($body, true);
-        $decoded = Arr::is($decoded) ? $decoded : [];
+        $decoded = $this->providerJson($body);
         $status = (int)($response['status'] ?? 0);
 
         return [
@@ -59,15 +62,6 @@ class GrokClient
         return $this->complete($input, $config);
     }
 
-    private function normalizeInput($input): string
-    {
-        if (is_object($input) && method_exists($input, 'prompt')) {
-            return (string)$input->prompt();
-        }
-
-        return (string)$input;
-    }
-
     private function payload($input, array $config): array
     {
         $payload = $config;
@@ -81,14 +75,20 @@ class GrokClient
 
     private function messages($input): array
     {
-        if (Arr::is($input) && isset($input[0]) && Arr::is($input[0]) && isset($input[0]['role'], $input[0]['content'])) {
+        if (
+            Arr::is($input)
+            && Arr::hasKey($input, 0)
+            && Arr::is($input[0])
+            && Arr::hasKey($input[0], 'role')
+            && Arr::hasKey($input[0], 'content')
+        ) {
             return $input;
         }
 
         return [
             [
                 'role' => 'user',
-                'content' => $this->normalizeInput($input),
+                'content' => $this->providerPrompt($input),
             ],
         ];
     }
@@ -114,11 +114,11 @@ class GrokClient
         $choice = $response['choices'][0] ?? [];
         if (Arr::is($choice)) {
             $message = $choice['message'] ?? [];
-            if (Arr::is($message) && isset($message['content'])) {
+            if (Arr::is($message) && Arr::hasKey($message, 'content')) {
                 return (string)$message['content'];
             }
 
-            if (isset($choice['text'])) {
+            if (Arr::hasKey($choice, 'text')) {
                 return (string)$choice['text'];
             }
         }
@@ -133,7 +133,7 @@ class GrokClient
         }
 
         $error = $response['error'] ?? [];
-        if (Arr::is($error) && isset($error['message'])) {
+        if (Arr::is($error) && Arr::hasKey($error, 'message') && Val::isNotEmpty($error['message'])) {
             return (string)$error['message'];
         }
 

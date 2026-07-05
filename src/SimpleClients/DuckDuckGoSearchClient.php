@@ -3,7 +3,10 @@
 // DuckDuckGoSearchService.php
 namespace BlueFission\SimpleClients;
 
+use BlueFission\Arr;
+use BlueFission\Net\HTTP;
 use BlueFission\Services\Service;
+use BlueFission\Val;
 use simplehtmldom\HtmlWeb;
 
 class DuckDuckGoSearchClient extends Service
@@ -19,7 +22,7 @@ class DuckDuckGoSearchClient extends Service
 
     public function search(string $query): array
     {
-        $url = $this->baseUrl . '?q=' . urlencode($query);
+        $url = $this->baseUrl . '?' . HTTP::query(['q' => $query]);
 
         $html = $this->htmlWeb->load($url);
 
@@ -29,10 +32,10 @@ class DuckDuckGoSearchClient extends Service
             $urlElement = $resultElement->find('.result__url', 0);
             $snippetElement = $resultElement->find('.result__snippet', 0);
 
-            if ($titleElement && $urlElement && $snippetElement) {
-                $parts = parse_url($urlElement->href);
-                parse_str($parts['query'], $query);
-                $url = $query['uddg'];
+            if (Val::isNotEmpty($titleElement) && Val::isNotEmpty($urlElement) && Val::isNotEmpty($snippetElement)) {
+                $parts = HTTP::urlParts($urlElement->href) ?? [];
+                parse_str(Arr::make($parts)->getPath('query', ''), $queryParams);
+                $url = Arr::make($queryParams)->getPath('uddg', '');
                 $results[] = [
                     'title' => $titleElement->plaintext,
                     'link' => $url,

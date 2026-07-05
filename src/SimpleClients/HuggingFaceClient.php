@@ -2,8 +2,11 @@
 // HuggingFaceService.php
 namespace BlueFission\SimpleClients;
 
+use BlueFission\Arr;
+use BlueFission\Net\HTTP;
 use BlueFission\Services\Service;
 use BlueFission\Str;
+use BlueFission\Val;
 
 class HuggingFaceClient extends Service
 {
@@ -33,57 +36,51 @@ class HuggingFaceClient extends Service
 
     public function hasApiKey(): bool
     {
-        return !empty($this->apiKey);
+        return Val::isNotEmpty($this->apiKey);
     }
 
     public function listModels(string $search = '', int $page = 1): array
     {
-        $endpoint = '/models?full=true&page=' . $page;
-        if (!empty($search)) {
-            $endpoint .= '&search=' . urlencode($search);
-        }
+        $endpoint = $this->apiEndpoint('/models', ['full' => 'true', 'page' => $page], $search);
         return $this->sendRequest($endpoint);
     }
 
     public function findDatasets(string $search = '', int $page = 1): array
     {
-        $endpoint = '/datasets?full=true&page=' . $page;
-        if (!empty($search)) {
-            $endpoint .= '&search=' . urlencode($search);
-        }
+        $endpoint = $this->apiEndpoint('/datasets', ['full' => 'true', 'page' => $page], $search);
         return $this->sendRequest($endpoint);
     }
 
 
     public function getModels(int $page = 1): array
     {
-        return $this->sendRequest('/models?full=true&page=' . $page);
+        return $this->sendRequest($this->apiEndpoint('/models', ['full' => 'true', 'page' => $page]));
     }
 
     public function getDatasets(int $page = 1): array
     {
-        return $this->sendRequest('/datasets?full=true&page=' . $page);
+        return $this->sendRequest($this->apiEndpoint('/datasets', ['full' => 'true', 'page' => $page]));
     }
 
     public function getModelDetails(string $modelId): array
     {
-        return $this->sendRequest('/models/' . urlencode($modelId));
+        return $this->sendRequest('/models/' . $this->urlSegment($modelId));
     }
 
     public function getDatasetDetails(string $datasetId): array
     {
-        return $this->sendRequest('/datasets/' . urlencode($datasetId));
+        return $this->sendRequest('/datasets/' . $this->urlSegment($datasetId));
     }
 
     public function getModelUsage(string $modelId): array
     {
-        return $this->sendRequest('/models/' . urlencode($modelId) . '/usage');
+        return $this->sendRequest('/models/' . $this->urlSegment($modelId) . '/usage');
     }
 
     public function downloadDataset(string $datasetId, string $targetDir): void
     {
         $datasetDetails = $this->getDatasetDetails($datasetId);
-        $filesUrl = $datasetDetails['files'];
+        $filesUrl = Arr::make($datasetDetails)->getPath('files', '');
 
         $zipFile = "{$targetDir}/{$datasetId}.zip";
 
@@ -101,7 +98,7 @@ class HuggingFaceClient extends Service
         $data = [
             'inputs' => $inputText,
         ];
-        return $this->sendRequest('/models/' . urlencode($modelId) . '/usage', 'POST', $data);
+        return $this->sendRequest('/models/' . $this->urlSegment($modelId) . '/usage', 'POST', $data);
     }
 
     public function createHostedInstance(string $repoUrl, string $token): array
@@ -115,16 +112,13 @@ class HuggingFaceClient extends Service
 
     public function findSpaces(string $search = '', int $page = 1): array
     {
-        $endpoint = '/spaces?full=true&page=' . $page;
-        if (!empty($search)) {
-            $endpoint .= '&search=' . urlencode($search);
-        }
+        $endpoint = $this->apiEndpoint('/spaces', ['full' => 'true', 'page' => $page], $search);
         return $this->sendRequest($endpoint);
     }
 
     public function findSpacesByModel(string $modelId, int $page = 1): array
     {
-        $endpoint = '/models/' . urlencode($modelId) . '/spaces?full=true&page=' . $page;
+        $endpoint = $this->apiEndpoint('/models/' . $this->urlSegment($modelId) . '/spaces', ['full' => 'true', 'page' => $page]);
         return $this->sendRequest($endpoint);
     }
 
@@ -141,8 +135,8 @@ class HuggingFaceClient extends Service
             'Content-Type: application/json',
         ];
 
-        if (!empty($queryParams)) {
-            $endpoint .= '?' . http_build_query($queryParams);
+        if (Arr::isNotEmpty($queryParams)) {
+            $endpoint .= '?' . HTTP::query($queryParams);
         }
 
         $url = $spaceUrl . $endpoint;
@@ -158,5 +152,19 @@ class HuggingFaceClient extends Service
 
         $value = getenv($key);
         return $value === false ? '' : (string)$value;
+    }
+
+    private function apiEndpoint(string $path, array $query, string $search = ''): string
+    {
+        if (Val::isNotEmpty($search)) {
+            $query['search'] = $search;
+        }
+
+        return $path . '?' . HTTP::query($query);
+    }
+
+    private function urlSegment(string $value): string
+    {
+        return HTTP::pathSegment($value);
     }
 }

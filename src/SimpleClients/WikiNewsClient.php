@@ -3,7 +3,10 @@
 // WikiNewsRequest.php
 namespace BlueFission\SimpleClients;
 
+use BlueFission\Arr;
+use BlueFission\Net\HTTP;
 use BlueFission\Services\Service;
+use BlueFission\Str;
 
 
 class WikiNewsClient extends Service
@@ -13,8 +16,8 @@ class WikiNewsClient extends Service
     public function getHeadlines($topic = '', $location = '')
     {
         $searchQuery = $topic;
-        if ($location) {
-            $searchQuery .= ($searchQuery ? ' AND ' : '') . $location;
+        if (Str::isNotEmpty($location)) {
+            $searchQuery .= (Str::isNotEmpty($searchQuery) ? ' AND ' : '') . $location;
         }
 
         $params = [
@@ -26,12 +29,13 @@ class WikiNewsClient extends Service
             'srlimit' => 25,
         ];
 
-        $url = $this->baseUrl . '?' . http_build_query($params);
+        $url = $this->baseUrl . '?' . HTTP::query($params);
         $response = HttpJson::get($url);
 
         $headlines = [];
-        if (isset($response['query']['search'])) {
-            foreach ($response['query']['search'] as $result) {
+        $results = Arr::make($response)->getPath('query.search', []);
+        if (Arr::isNotEmpty($results)) {
+            foreach ($results as $result) {
                 $headlines[] = $result;
             }
         }

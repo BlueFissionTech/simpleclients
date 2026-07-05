@@ -2,6 +2,8 @@
 // WeatherRequest.php
 namespace BlueFission\SimpleClients;
 
+use BlueFission\Arr;
+use BlueFission\Net\HTTP;
 use BlueFission\Services\Service;
 
 class OpenWeatherClient extends Service
@@ -23,17 +25,17 @@ class OpenWeatherClient extends Service
             'units' => 'imperial', // Use 'metric' for Celsius and 'imperial' for Fahrenheit
         ];
 
-        $url = $this->baseUrl . '?' . http_build_query($params);
+        $url = $this->baseUrl . '?' . HTTP::query($params);
         $response = HttpJson::get($url);
 
-        if (isset($response['main'], $response['weather'][0])) {
-            $temperature = $response['main']['temp'];
-            $description = $response['weather'][0]['description'];
+        if (Arr::hasKey($response, 'main') && Arr::make($response)->getPath('weather.0')) {
+            $temperature = Arr::make($response)->getPath('main.temp');
+            $description = Arr::make($response)->getPath('weather.0.description');
 
             return "The current temperature in {$location} is {$temperature}°F with {$description}.";
-        } else {
-            return "Unable to fetch weather data for {$location}.";
         }
+
+        return "Unable to fetch weather data for {$location}.";
     }
 
     private function getEnv(string $key): string

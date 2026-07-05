@@ -24,7 +24,7 @@ class TranscriptionClient
 
     public function transcribe($input, array $config = []): array
     {
-        $config = array_merge($this->config, $config);
+        $config = $this->providerConfig($this->config, $config);
         $provider = $this->providerName($config);
 
         return match ($provider) {
@@ -52,7 +52,7 @@ class TranscriptionClient
         if (Val::isNotEmpty($token)) {
             $headers[] = 'Authorization: Bearer ' . $token;
         } elseif (Val::isNotEmpty($apiKey)) {
-            $endpoint .= (Str::has($endpoint, '?') ? '&' : '?') . 'key=' . urlencode($apiKey);
+            $endpoint = $this->providerAppendParam($endpoint, 'key', $apiKey);
         }
 
         $response = $this->http->request('POST', $endpoint, $headers, $payload);
@@ -68,7 +68,7 @@ class TranscriptionClient
         $apiKey = $config['api_key'] ?? null;
         $contentType = $config['content_type'] ?? 'audio/wav';
         $query = $config['query'] ?? [];
-        if (!isset($query['language'])) {
+        if (!Arr::hasKey($query, 'language')) {
             $query['language'] = $config['language'] ?? 'en-US';
         }
 
@@ -79,9 +79,7 @@ class TranscriptionClient
             $headers[] = 'Ocp-Apim-Subscription-Key: ' . $apiKey;
         }
 
-        if (Arr::isNotEmpty($query)) {
-            $url .= (Str::has($url, '?') ? '&' : '?') . http_build_query($query);
-        }
+        $url = $this->providerAppendQuery($url, $query);
 
         $audio = $this->normalizeProviderInput($input);
         if ($audio['type'] === 'url') {
@@ -126,7 +124,7 @@ class TranscriptionClient
 
         if (Val::isNotEmpty($accessKey) && Val::isNotEmpty($secretKey)) {
             $signer = new SigV4();
-            $headers = $signer->sign('POST', $endpoint, $headers, json_encode($payload), $region, 'transcribe', $accessKey, $secretKey, $sessionToken);
+            $headers = $signer->sign('POST', $endpoint, $headers, $this->providerEncode($payload), $region, 'transcribe', $accessKey, $secretKey, $sessionToken);
         } else {
             return $this->errorResponse('AWS credentials required for Transcribe.');
         }
@@ -138,12 +136,12 @@ class TranscriptionClient
     private function normalizeGcp(string $body): array
     {
         $data = $this->providerJson($body);
-        $results = $data['results'][0]['alternatives'][0] ?? [];
+        $results = $this->providerPath($data, 'results.0.alternatives.0', []);
 
         return [
             'text' => $results['transcript'] ?? '',
             'confidence' => $results['confidence'] ?? null,
-            'segments' => $data['results'] ?? [],
+            'segments' => $this->providerPath($data, 'results', []),
             'raw' => $data,
         ];
     }
@@ -156,9 +154,9 @@ class TranscriptionClient
         }
 
         return [
-            'text' => $data['DisplayText'] ?? ($data['Text'] ?? ''),
+            'text' => $this->providerPath($data, 'DisplayText', $this->providerPath($data, 'Text', '')),
             'confidence' => $data['Confidence'] ?? null,
-            'segments' => $data['NBest'] ?? [],
+            'segments' => $this->providerPath($data, 'NBest', []),
             'raw' => $data,
         ];
     }
@@ -166,10 +164,10 @@ class TranscriptionClient
     private function normalizeAws(string $body): array
     {
         $data = $this->providerJson($body);
-        $job = $data['TranscriptionJob'] ?? [];
+        $job = $this->providerPath($data, 'TranscriptionJob', []);
 
         return [
-            'text' => $job['Transcript']['TranscriptFileUri'] ?? '',
+            'text' => $this->providerPath($job, 'Transcript.TranscriptFileUri', ''),
             'confidence' => null,
             'segments' => $job,
             'raw' => $data,

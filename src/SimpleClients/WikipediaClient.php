@@ -3,6 +3,8 @@
 // WikipediaService.php
 namespace BlueFission\SimpleClients;
 
+use BlueFission\Arr;
+use BlueFission\Net\HTTP;
 use BlueFission\Services\Service;
 
 class WikipediaClient extends Service
@@ -20,13 +22,13 @@ class WikipediaClient extends Service
             'titles' => $topic,
         ];
 
-        $url = $this->baseUrl . '?' . http_build_query($params);
+        $url = $this->baseUrl . '?' . HTTP::query($params);
 
         $response = HttpJson::get($url);
-        $pages = $response['query']['pages'] ?? [];
+        $pages = Arr::make($response)->getPath('query.pages', []);
 
         foreach ($pages as $page) {
-            if (isset($page['extract'])) {
+            if (Arr::hasKey($page, 'extract')) {
                 return $page['extract'];
             }
         }

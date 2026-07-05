@@ -24,7 +24,7 @@ class OcrClient
 
     public function analyze($input, array $config = []): array
     {
-        $config = array_merge($this->config, $config);
+        $config = $this->providerConfig($this->config, $config);
         $provider = $this->providerName($config);
 
         return match ($provider) {
@@ -51,7 +51,7 @@ class OcrClient
         if (Val::isNotEmpty($token)) {
             $headers[] = 'Authorization: Bearer ' . $token;
         } elseif (Val::isNotEmpty($apiKey)) {
-            $endpoint .= (Str::has($endpoint, '?') ? '&' : '?') . 'key=' . urlencode($apiKey);
+            $endpoint = $this->providerAppendParam($endpoint, 'key', $apiKey);
         }
 
         $response = $this->http->request('POST', $endpoint, $headers, $payload);
@@ -66,10 +66,10 @@ class OcrClient
         $token = $config['token'] ?? null;
         $apiKey = $config['api_key'] ?? null;
         $query = $config['query'] ?? [];
-        if (!isset($query['language']) && Val::isNotEmpty($config['language'] ?? null)) {
+        if (!Arr::hasKey($query, 'language') && Val::isNotEmpty($config['language'] ?? null)) {
             $query['language'] = $config['language'];
         }
-        if (!isset($query['detectOrientation']) && Val::isNotEmpty($config['detect_orientation'] ?? null)) {
+        if (!Arr::hasKey($query, 'detectOrientation') && Val::isNotEmpty($config['detect_orientation'] ?? null)) {
             $query['detectOrientation'] = $config['detect_orientation'];
         }
 
@@ -80,9 +80,7 @@ class OcrClient
             $headers[] = 'Ocp-Apim-Subscription-Key: ' . $apiKey;
         }
 
-        if (Arr::isNotEmpty($query)) {
-            $url .= (Str::has($url, '?') ? '&' : '?') . http_build_query($query);
-        }
+        $url = $this->providerAppendQuery($url, $query);
 
         $inputInfo = $this->normalizeProviderInput($input);
         if ($inputInfo['type'] === 'url') {
@@ -106,7 +104,7 @@ class OcrClient
         $sessionToken = $config['session_token'] ?? null;
 
         $document = [];
-        if (!empty($config['s3_bucket']) && !empty($config['s3_key'])) {
+        if ($this->providerHas($config, 's3_bucket') && $this->providerHas($config, 's3_key')) {
             $document['S3Object'] = [
                 'Bucket' => $config['s3_bucket'],
                 'Name' => $config['s3_key'],
@@ -127,7 +125,7 @@ class OcrClient
 
         if (Val::isNotEmpty($accessKey) && Val::isNotEmpty($secretKey)) {
             $signer = new SigV4();
-            $signed = $signer->sign('POST', $endpoint, $headers, json_encode($payload), $region, 'textract', $accessKey, $secretKey, $sessionToken);
+            $signed = $signer->sign('POST', $endpoint, $headers, $this->providerEncode($payload), $region, 'textract', $accessKey, $secretKey, $sessionToken);
             $headers = $signed;
         } else {
             return $this->errorResponse('AWS credentials required for Textract OCR.');
@@ -150,11 +148,11 @@ class OcrClient
     private function normalizeGcp(string $body): array
     {
         $data = $this->providerJson($body);
-        $response = $data['responses'][0] ?? [];
-        $text = $response['textAnnotations'][0]['description'] ?? '';
+        $response = $this->providerPath($data, 'responses.0', []);
+        $text = $this->providerPath($response, 'textAnnotations.0.description', '');
         $blocks = [];
         foreach (($response['textAnnotations'] ?? []) as $item) {
-            if (!isset($item['description'])) {
+            if (!Arr::hasKey($item, 'description')) {
                 continue;
             }
             $blocks[] = [
@@ -167,7 +165,7 @@ class OcrClient
             'text' => $text,
             'blocks' => $blocks,
             'entities' => [],
-            'confidence' => $response['textAnnotations'][0]['score'] ?? null,
+            'confidence' => $this->providerPath($response, 'textAnnotations.0.score'),
             'raw' => $data,
         ];
     }
@@ -178,13 +176,15 @@ class OcrClient
         $lines = [];
         foreach (($data['regions'] ?? []) as $region) {
             foreach (($region['lines'] ?? []) as $line) {
-                $words = array_map(fn ($w) => $w['text'] ?? '', $line['words'] ?? []);
-                $lines[] = Str::trim(implode(' ', $words));
+                $words = Arr::make($line['words'] ?? [])
+                    ->map(fn ($word) => $word['text'] ?? '')
+                    ->toArray();
+                $lines[] = Str::trim($this->providerJoin($words, ' '));
             }
         }
 
         return [
-            'text' => Str::trim(implode("\n", $lines)),
+            'text' => Str::trim($this->providerJoin($lines, "\n")),
             'blocks' => $lines,
             'entities' => [],
             'confidence' => null,
@@ -203,7 +203,7 @@ class OcrClient
         }
 
         return [
-            'text' => Str::trim(implode("\n", $lines)),
+            'text' => Str::trim($this->providerJoin($lines, "\n")),
             'blocks' => $lines,
             'entities' => [],
             'confidence' => null,

@@ -2,6 +2,7 @@
 // LocationService.php
 namespace BlueFission\SimpleClients;
 
+use BlueFission\Arr;
 use BlueFission\Services\Service;
 
 class GeoLocationClient extends Service
@@ -19,15 +20,15 @@ class GeoLocationClient extends Service
         $url = $this->baseUrl."/{$ip}";
         $response = HttpJson::get($url);
 
-        if (isset($response['city'])) {
+        if (Arr::hasKey($response, 'city')) {
             $cityState = $response['city'];
-            if (isset($response['regionName'])) {
+            if (Arr::hasKey($response, 'regionName')) {
                 $cityState .= ', ' . $response['regionName'];
             }
 
             return $cityState;
-        } else {
-            return 'New York';
         }
+
+        return 'New York';
     }
 }

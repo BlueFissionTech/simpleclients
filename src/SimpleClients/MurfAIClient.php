@@ -2,6 +2,7 @@
 
 namespace BlueFission\SimpleClients;
 
+use BlueFission\Arr;
 use BlueFission\Services\Service;
 use BlueFission\Net\HTTP;
 use BlueFission\Connections\Curl;
@@ -37,12 +38,12 @@ class MurfAIClient extends Service
 
         $this->_curl->config('target', 'https://api.murf.ai/tts');
         $this->_curl->open();
-        $this->_curl->query(http_build_query($request_data));
+        $this->_curl->query(HTTP::query($request_data));
         $response = $this->_curl->result();
         $this->_curl->close();
 
-        $responseBody = json_decode($response, true);
-        return $responseBody['data']['link'];
+        $responseBody = HTTP::jsonDecode((string)$response, true, []);
+        return Arr::make($responseBody)->getPath('data.link', '');
     }
 
     private function getEnv(string $key): string

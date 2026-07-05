@@ -5,7 +5,9 @@ namespace BlueFission\SimpleClients\Concerns;
 use BlueFission\Arr;
 use BlueFission\Connections\IO;
 use BlueFission\Net\HTTP;
+use BlueFission\Obj;
 use BlueFission\Str;
+use BlueFission\Val;
 
 trait ProviderClientHelpers
 {
@@ -14,13 +16,82 @@ trait ProviderClientHelpers
         return Str::lower((string)($config['provider'] ?? $default));
     }
 
+    private function providerConfig(array $base, array $override = []): array
+    {
+        $config = Arr::make($base)->toArray();
+
+        foreach ($override as $key => $value) {
+            $config[$key] = $value;
+        }
+
+        return $config;
+    }
+
+    private function providerHas(array $source, string|int $key): bool
+    {
+        return Arr::hasKey($source, $key) && Val::isNotEmpty($source[$key]);
+    }
+
+    private function providerPath(array|object $source, string|array $path, mixed $fallback = null): mixed
+    {
+        return Arr::make($source)->getPath($path, $fallback);
+    }
+
+    private function providerQuery(array $query): string
+    {
+        return Arr::isNotEmpty($query) ? HTTP::query($query) : '';
+    }
+
+    private function providerAppendQuery(string $url, array $query): string
+    {
+        $queryString = $this->providerQuery($query);
+
+        if (Val::isEmpty($queryString)) {
+            return $url;
+        }
+
+        return $url . (Str::has($url, '?') ? '&' : '?') . $queryString;
+    }
+
+    private function providerAppendParam(string $url, string $name, mixed $value): string
+    {
+        return $this->providerAppendQuery($url, [$name => $value]);
+    }
+
+    private function providerEncode(mixed $value): string
+    {
+        if (Arr::is($value)) {
+            return (string)HTTP::jsonEncode($value);
+        }
+
+        return (string)$value;
+    }
+
+    private function providerJoin(array $parts, string $separator = ''): string
+    {
+        return Arr::make($parts)->join($separator)->val();
+    }
+
+    private function providerPrompt($input): string
+    {
+        if ($input instanceof Obj && method_exists($input, 'prompt')) {
+            return (string)$input->prompt();
+        }
+
+        if (is_object($input) && method_exists($input, 'prompt')) {
+            return (string)$input->prompt();
+        }
+
+        return (string)$input;
+    }
+
     private function normalizeProviderInput($input): array
     {
-        if (Arr::is($input) && isset($input['type'], $input['value'])) {
+        if (Arr::is($input) && Arr::hasKey($input, 'type') && Arr::hasKey($input, 'value')) {
             return $input;
         }
 
-        if (Str::is($input) && filter_var($input, FILTER_VALIDATE_URL)) {
+        if (Str::is($input) && HTTP::urlScheme($input) && HTTP::urlHost($input)) {
             return ['type' => 'url', 'value' => $input];
         }
 
@@ -59,10 +130,6 @@ trait ProviderClientHelpers
 
     private function providerJsonValue(string $body, mixed $fallback = null): mixed
     {
-        if (method_exists(HTTP::class, 'jsonDecode')) {
-            return HTTP::jsonDecode($body, true, $fallback);
-        }
-
-        return json_decode($body, true) ?? $fallback;
+        return HTTP::jsonDecode($body, true, $fallback);
     }
 }
