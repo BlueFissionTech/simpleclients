@@ -7,6 +7,8 @@ use BlueFission\Str;
 
 class ProviderCapabilityMap
 {
+    private const INTEROP_PROTOCOLS = ['annex', 'synematic'];
+
     private const CAPABILITIES = [
         'claude' => [
             'service' => 'claude',
@@ -75,5 +77,20 @@ class ProviderCapabilityMap
         }
 
         return $providers;
+    }
+
+    public static function interopManifest(string $provider): array
+    {
+        $capabilities = self::get($provider);
+
+        return [
+            'protocols' => self::INTEROP_PROTOCOLS,
+            'owner' => 'simpleclients',
+            'service' => $capabilities->service(),
+            'actions' => $capabilities->actions(),
+            'auth' => $capabilities->auth(),
+            'transports' => $capabilities->transports(),
+            'config' => $capabilities->config(),
+        ];
     }
 }
