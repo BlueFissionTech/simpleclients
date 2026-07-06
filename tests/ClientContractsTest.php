@@ -12,6 +12,8 @@ use BlueFission\SimpleClients\Contracts\ClientResponse;
 use BlueFission\SimpleClients\Contracts\OptionalDependency;
 use BlueFission\SimpleClients\Contracts\ProviderCapabilityMap;
 use BlueFission\SimpleClients\Contracts\ProviderConfig;
+use BlueFission\SimpleClients\HttpJson;
+use BlueFission\SimpleClients\HttpJsonContractClient;
 use PHPUnit\Framework\TestCase;
 
 class ClientContractsTest extends TestCase
@@ -195,6 +197,44 @@ class ClientContractsTest extends TestCase
             'method' => 'POST',
             'url' => '/messages',
         ], $response->data());
+    }
+
+    public function testHttpJsonContractClientSendsClientRequests(): void
+    {
+        $seen = [];
+        HttpJson::fetchUsing(function (string $method, string $url, array $headers, $body) use (&$seen): string {
+            $seen = compact('method', 'url', 'headers', 'body');
+
+            return '{"accepted":true}';
+        });
+
+        try {
+            $client = new HttpJsonContractClient(new ClientConfig([
+                'base_url' => 'https://api.example.test',
+                'headers' => ['Accept' => 'application/json'],
+            ]));
+
+            $response = $client->send(new ClientRequest([
+                'method' => 'post',
+                'url' => '/records',
+                'headers' => ['X-Trace' => 'abc'],
+                'query' => ['page' => 2],
+                'body' => ['name' => 'Ada'],
+            ]));
+
+            $this->assertTrue($response->ok());
+            $this->assertSame(['accepted' => true], $response->data());
+            $this->assertSame('POST', $seen['method']);
+            $this->assertSame('https://api.example.test/records?page=2', $seen['url']);
+            $this->assertSame([
+                'Accept' => 'application/json',
+                'X-Trace' => 'abc',
+            ], $seen['headers']);
+            $this->assertSame(['name' => 'Ada'], $seen['body']);
+            $this->assertSame('http_json', $client->capabilities()->service());
+        } finally {
+            HttpJson::fetchUsing(null);
+        }
     }
 
     public function testProviderCapabilityMapReturnsStableCapabilities(): void
