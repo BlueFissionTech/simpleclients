@@ -10,6 +10,7 @@ use BlueFission\SimpleClients\Contracts\ClientInterface;
 use BlueFission\SimpleClients\Contracts\ClientRequest;
 use BlueFission\SimpleClients\Contracts\ClientResponse;
 use BlueFission\SimpleClients\Contracts\OptionalDependency;
+use BlueFission\SimpleClients\Contracts\ProviderCapabilityMap;
 use BlueFission\SimpleClients\Contracts\ProviderConfig;
 use PHPUnit\Framework\TestCase;
 
@@ -194,6 +195,35 @@ class ClientContractsTest extends TestCase
             'method' => 'POST',
             'url' => '/messages',
         ], $response->data());
+    }
+
+    public function testProviderCapabilityMapReturnsStableCapabilities(): void
+    {
+        $ocr = ProviderCapabilityMap::get('OCR');
+        $unknown = ProviderCapabilityMap::get('custom-provider');
+        $all = ProviderCapabilityMap::all();
+
+        $this->assertSame('ocr', $ocr->service());
+        $this->assertContains('analyze', $ocr->actions());
+        $this->assertContains('aws_sigv4', $ocr->auth());
+        $this->assertContains('provider', $ocr->config());
+        $this->assertSame('custom-provider', $unknown->service());
+        $this->assertSame(['http'], $unknown->transports());
+        $this->assertArrayHasKey('claude', $all);
+        $this->assertArrayHasKey('speech', $all);
+        $this->assertSame('speech', $all['speech']->service());
+    }
+
+    public function testProviderCapabilityMapExposesInteropManifest(): void
+    {
+        $manifest = ProviderCapabilityMap::interopManifest('speech');
+
+        $this->assertSame(['annex', 'synematic'], $manifest['protocols']);
+        $this->assertSame('simpleclients', $manifest['owner']);
+        $this->assertSame('speech', $manifest['service']);
+        $this->assertContains('transcribe', $manifest['actions']);
+        $this->assertContains('aws_sigv4', $manifest['auth']);
+        $this->assertContains('media_uri', $manifest['config']);
     }
 
     public function testOptionalDependencyReportsAvailabilityAndInstallHint(): void
