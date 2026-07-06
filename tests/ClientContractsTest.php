@@ -9,6 +9,9 @@ use BlueFission\SimpleClients\Contracts\ClientConfig;
 use BlueFission\SimpleClients\Contracts\ClientInterface;
 use BlueFission\SimpleClients\Contracts\ClientRequest;
 use BlueFission\SimpleClients\Contracts\ClientResponse;
+use BlueFission\SimpleClients\Contracts\OptionalDependency;
+use BlueFission\SimpleClients\Contracts\ProviderCapabilityMap;
+use BlueFission\SimpleClients\Contracts\ProviderConfig;
 use BlueFission\SimpleClients\HttpJson;
 use BlueFission\SimpleClients\HttpJsonContractClient;
 use PHPUnit\Framework\TestCase;
@@ -64,6 +67,35 @@ class ClientContractsTest extends TestCase
         $this->assertSame(['api_key'], $capabilities->auth());
     }
 
+    public function testClientResponseNormalizesProviderResults(): void
+    {
+        $success = ClientResponse::fromProviderResult([
+            'message' => 'ok',
+            'status' => 202,
+        ], 200, ['provider' => 'grok']);
+
+        $failure = ClientResponse::fromProviderResult([
+            'error' => 'rate limited',
+            'status' => 429,
+        ]);
+
+        $http = ClientResponse::fromHttpJson(['accepted' => true], 201, ['X-Trace' => 'abc']);
+
+        $this->assertTrue($success->ok());
+        $this->assertSame(202, $success->status());
+        $this->assertSame('grok', $success->meta()['provider']);
+        $this->assertFalse($failure->ok());
+        $this->assertSame('rate limited', $failure->error());
+        $this->assertSame(429, $failure->status());
+        $this->assertTrue($http->ok());
+        $this->assertSame(['accepted' => true], $http->data());
+        $this->assertSame(['accepted' => true], $http->body());
+        $this->assertSame(['X-Trace' => 'abc'], $http->headers());
+        $this->assertSame(201, $http->toNetResponse()->getStatusCode());
+        $this->assertSame(['X-Trace' => 'abc'], $http->toNetResponse()->getHeaders());
+        $this->assertSame(['accepted' => true], $http->toServiceResponse()->data);
+    }
+
     public function testContractMembersConstrainUnexpectedShapes(): void
     {
         $config = new ClientConfig([
@@ -84,6 +116,45 @@ class ClientContractsTest extends TestCase
         $this->assertSame('POST', $request->method());
         $this->assertSame([], $request->headers());
         $this->assertSame([], $request->query());
+    }
+
+    public function testProviderConfigUsesContractObjectConstraints(): void
+    {
+        $config = new ProviderConfig([
+            'provider' => 'azure',
+            'endpoint' => 'https://provider.example',
+            'auth' => ['api_key' => 'key'],
+            'headers' => 'bad-headers',
+            'query' => ['language' => 'en-US'],
+            'options' => false,
+        ]);
+
+        $this->assertSame('azure', $config->provider());
+        $this->assertSame('https://provider.example', $config->endpoint());
+        $this->assertSame(['api_key' => 'key'], $config->auth());
+        $this->assertSame([], $config->headers());
+        $this->assertSame(['language' => 'en-US'], $config->query());
+        $this->assertSame([], $config->options());
+        $this->assertSame([
+            'provider' => 'azure',
+            'endpoint' => 'https://provider.example',
+            'auth' => ['api_key' => 'key'],
+            'headers' => [],
+            'query' => ['language' => 'en-US'],
+            'options' => [],
+        ], $config->toArray());
+
+        $config
+            ->config('endpoint', 'https://next.example')
+            ->config([
+                'headers' => ['Accept' => 'application/json'],
+                'options' => 'invalid-options',
+            ]);
+
+        $this->assertSame('https://next.example', $config->config('endpoint'));
+        $this->assertSame(['Accept' => 'application/json'], $config->headers());
+        $this->assertSame([], $config->options());
+        $this->assertSame('azure', $config->config()['provider']);
     }
 
     public function testInterfaceSupportsAReusableClientBoundary(): void
@@ -164,5 +235,60 @@ class ClientContractsTest extends TestCase
         } finally {
             HttpJson::fetchUsing(null);
         }
+    }
+
+    public function testProviderCapabilityMapReturnsStableCapabilities(): void
+    {
+        $ocr = ProviderCapabilityMap::get('OCR');
+        $unknown = ProviderCapabilityMap::get('custom-provider');
+        $all = ProviderCapabilityMap::all();
+
+        $this->assertSame('ocr', $ocr->service());
+        $this->assertContains('analyze', $ocr->actions());
+        $this->assertContains('aws_sigv4', $ocr->auth());
+        $this->assertContains('provider', $ocr->config());
+        $this->assertSame('custom-provider', $unknown->service());
+        $this->assertSame(['http'], $unknown->transports());
+        $this->assertArrayHasKey('claude', $all);
+        $this->assertArrayHasKey('speech', $all);
+        $this->assertSame('speech', $all['speech']->service());
+    }
+
+    public function testProviderCapabilityMapExposesInteropManifest(): void
+    {
+        $manifest = ProviderCapabilityMap::interopManifest('speech');
+
+        $this->assertSame(['annex', 'synematic'], $manifest['protocols']);
+        $this->assertSame('simpleclients', $manifest['owner']);
+        $this->assertSame('speech', $manifest['service']);
+        $this->assertContains('transcribe', $manifest['actions']);
+        $this->assertContains('aws_sigv4', $manifest['auth']);
+        $this->assertContains('media_uri', $manifest['config']);
+    }
+
+    public function testOptionalDependencyReportsAvailabilityAndInstallHint(): void
+    {
+        $available = OptionalDependency::forClass(
+            'bluefission/develation',
+            ClientResponse::class,
+            'contract responses'
+        );
+
+        $missing = OptionalDependency::forClass(
+            'vendor/missing-sdk',
+            'Vendor\\Missing\\Client',
+            'missing provider',
+            'composer require vendor/missing-sdk'
+        );
+
+        $this->assertTrue($available->available());
+        $this->assertSame('', $available->message());
+        $this->assertFalse($missing->available());
+        $this->assertSame(
+            'missing provider: requires optional package: vendor/missing-sdk: composer require vendor/missing-sdk',
+            $missing->message()
+        );
+        $this->assertSame('missing provider', $missing->toArray()['capability']);
+        $this->assertFalse($missing->toArray()['available']);
     }
 }
