@@ -131,6 +131,18 @@ Below is a brief overview of more clients and their methods.
 
 Client constructors accept credentials and optional transport/test doubles where supported. Environment helpers are used only as fallback configuration. Do not commit secrets; pass API keys through runtime configuration, environment variables, or secret-management layers outside this package.
 
+## Develation Usage Pattern
+
+SimpleClients treats DevElation helpers as the preferred package surface for reusable client internals:
+
+- Use `Arr` for response traversal, config merging, key checks, joins, and iterable transformations.
+- Use `Str` for provider names, endpoint normalization, prefix checks, pattern matching, and string cleanup.
+- Use `Val` for nullable, empty, truthy, and falsy checks around optional credentials and provider responses.
+- Use `BlueFission\Net\HTTP` for query strings, JSON encoding/decoding, URL parsing, path segment encoding, and header lines.
+- Use contract objects such as `ClientConfig`, `ClientRequest`, `ClientResponse`, and `ClientCapabilities` when a workflow needs stable request, response, or capability shapes.
+
+Provider clients may continue returning their current array or string shapes for compatibility, but new shared paths should prefer these primitives and contract objects before introducing raw arrays or standalone helper functions.
+
 See `SPEC.md`, `ARCHITECTURE.md`, `CLIENT_CONTRACTS.md`, `PROVIDER_EXTRACTION.md`, and `tests.md` for package scope, client boundaries, reusable contract shapes, provider extraction gates, and validation commands.
 
 ## Contributing

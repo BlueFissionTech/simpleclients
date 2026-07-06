@@ -2,6 +2,11 @@
 
 namespace BlueFission\SimpleClients\Contracts;
 
+use BlueFission\Arr;
+use BlueFission\Net\Response as NetResponse;
+use BlueFission\Services\Response as ServiceResponse;
+use BlueFission\Val;
+
 class ClientResponse extends ContractObject
 {
     protected function memberDefaults(): array
@@ -44,6 +49,29 @@ class ClientResponse extends ContractObject
         ]);
     }
 
+    public static function fromProviderResult(array $result, int $defaultStatus = 200, array $meta = []): self
+    {
+        $status = (int)Arr::make($result)->getPath('status', $defaultStatus);
+        $error = (string)Arr::make($result)->getPath('error', '');
+
+        if (Val::isNotEmpty($error) || $status >= 400) {
+            return self::failure($error ?: 'Provider request failed.', $status, $meta);
+        }
+
+        return self::success($result, $status, $meta);
+    }
+
+    public static function fromHttpJson(array $data, int $status = 200, array $headers = [], array $meta = []): self
+    {
+        return new self([
+            'status' => $status,
+            'headers' => $headers,
+            'data' => $data,
+            'body' => $data,
+            'meta' => $meta,
+        ]);
+    }
+
     public function ok(): bool
     {
         return $this->error() === '' && $this->status() >= 200 && $this->status() < 300;
@@ -77,6 +105,19 @@ class ClientResponse extends ContractObject
     public function meta(): array
     {
         return $this->arrayMember('meta');
+    }
+
+    public function toNetResponse(): NetResponse
+    {
+        return new NetResponse($this->status(), $this->headers(), $this->body());
+    }
+
+    public function toServiceResponse(): ServiceResponse
+    {
+        $response = new ServiceResponse();
+        $response->fill($this->toArray());
+
+        return $response;
     }
 
     public function toArray(): array
