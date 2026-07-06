@@ -64,6 +64,35 @@ class ClientContractsTest extends TestCase
         $this->assertSame(['api_key'], $capabilities->auth());
     }
 
+    public function testClientResponseNormalizesProviderResults(): void
+    {
+        $success = ClientResponse::fromProviderResult([
+            'message' => 'ok',
+            'status' => 202,
+        ], 200, ['provider' => 'grok']);
+
+        $failure = ClientResponse::fromProviderResult([
+            'error' => 'rate limited',
+            'status' => 429,
+        ]);
+
+        $http = ClientResponse::fromHttpJson(['accepted' => true], 201, ['X-Trace' => 'abc']);
+
+        $this->assertTrue($success->ok());
+        $this->assertSame(202, $success->status());
+        $this->assertSame('grok', $success->meta()['provider']);
+        $this->assertFalse($failure->ok());
+        $this->assertSame('rate limited', $failure->error());
+        $this->assertSame(429, $failure->status());
+        $this->assertTrue($http->ok());
+        $this->assertSame(['accepted' => true], $http->data());
+        $this->assertSame(['accepted' => true], $http->body());
+        $this->assertSame(['X-Trace' => 'abc'], $http->headers());
+        $this->assertSame(201, $http->toNetResponse()->getStatusCode());
+        $this->assertSame(['X-Trace' => 'abc'], $http->toNetResponse()->getHeaders());
+        $this->assertSame(['accepted' => true], $http->toServiceResponse()->data);
+    }
+
     public function testContractMembersConstrainUnexpectedShapes(): void
     {
         $config = new ClientConfig([
