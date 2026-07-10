@@ -17,7 +17,7 @@ class GoogleGeminiClient extends Client {
 	}
 
     private function resolveClient() {
-    	if (class_exists('\\Gemini')) {
+        if (Runtime::classAvailable('\\Gemini')) {
     		return \Gemini::client($this->_apiKey);
     	}
 
@@ -52,7 +52,7 @@ class GoogleGeminiClient extends Client {
 		$input = $this->normalizeInput($input);
 		$chat = $this->_client->geminiPro();
 
-		if (Arr::size($history) > 0 && method_exists($chat, 'startChat')) {
+		if (Arr::size($history) > 0 && Runtime::objectCanCall($chat, 'startChat')) {
 			$chat->startChat(history: $history);
 		}
 
@@ -67,7 +67,7 @@ class GoogleGeminiClient extends Client {
 	public function embeddings($input): array
 	{
 		$input = $this->normalizeInput($input);
-		if (!method_exists($this->_client, 'embeddingModel')) {
+		if (!Runtime::objectCanCall($this->_client, 'embeddingModel')) {
 			return [];
 		}
 
@@ -79,15 +79,16 @@ class GoogleGeminiClient extends Client {
 			return $response;
 		}
 
-		if (is_object($response) && Val::isNotNull($response->embedding->values ?? null)) {
-			return (array)$response->embedding->values;
+		$values = Arr::make($response)->getPath('embedding.values');
+		if (Val::isNotNull($values)) {
+			return Arr::make($values)->toArray();
 		}
 
 		return [];
 	}
 
 	private function normalizeInput($input) {
-		if (is_object($input) && method_exists($input, 'prompt')) {
+		if (Runtime::objectCanCall($input, 'prompt')) {
 			return $this->providerPrompt($input);
 		}
 
@@ -96,7 +97,7 @@ class GoogleGeminiClient extends Client {
 
 	private function extractText($response): string
 	{
-		if (is_object($response) && method_exists($response, 'text')) {
+		if (Runtime::objectCanCall($response, 'text')) {
 			return (string)$response->text();
 		}
 

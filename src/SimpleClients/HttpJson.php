@@ -101,7 +101,7 @@ class HttpJson
         return $method === 'GET'
             && Arr::size($headers) === 0
             && Val::isNull($body)
-            && method_exists(IO::class, 'fetch')
-            && !function_exists(__NAMESPACE__ . '\\file_get_contents');
+            && Runtime::canCall(IO::class, 'fetch')
+            && !Runtime::isCallable(__NAMESPACE__ . '\\file_get_contents');
     }
 }

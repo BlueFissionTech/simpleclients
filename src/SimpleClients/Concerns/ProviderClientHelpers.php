@@ -6,6 +6,7 @@ use BlueFission\Arr;
 use BlueFission\Connections\IO;
 use BlueFission\Net\HTTP;
 use BlueFission\Obj;
+use BlueFission\SimpleClients\Runtime;
 use BlueFission\Str;
 use BlueFission\Val;
 
@@ -74,11 +75,11 @@ trait ProviderClientHelpers
 
     private function providerPrompt($input): string
     {
-        if ($input instanceof Obj && method_exists($input, 'prompt')) {
+        if ($input instanceof Obj && Runtime::canCall($input, 'prompt')) {
             return (string)$input->prompt();
         }
 
-        if (is_object($input) && method_exists($input, 'prompt')) {
+        if (Runtime::objectCanCall($input, 'prompt')) {
             return (string)$input->prompt();
         }
 
@@ -112,7 +113,7 @@ trait ProviderClientHelpers
 
     private function providerFileBytes(string $path): string
     {
-        if (method_exists(IO::class, 'input')) {
+        if (Runtime::canCall(IO::class, 'input')) {
             $bytes = IO::input($path);
         } else {
             $bytes = IO::std($path);
