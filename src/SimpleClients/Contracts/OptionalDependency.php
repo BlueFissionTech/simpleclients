@@ -3,6 +3,7 @@
 namespace BlueFission\SimpleClients\Contracts;
 
 use BlueFission\Arr;
+use BlueFission\SimpleClients\Runtime;
 use BlueFission\Str;
 use BlueFission\Val;
 
@@ -60,7 +61,7 @@ class OptionalDependency extends ContractObject
 
     public function available(): bool
     {
-        return Val::isNotEmpty($this->class()) && class_exists($this->class());
+        return Runtime::classAvailable($this->class());
     }
 
     public function message(): string

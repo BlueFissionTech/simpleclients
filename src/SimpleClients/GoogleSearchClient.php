@@ -54,11 +54,6 @@ class GoogleSearchClient extends Service
 
     private function getEnv(string $key): string
     {
-        if (function_exists('env')) {
-            return (string)env($key);
-        }
-
-        $value = getenv($key);
-        return $value === false ? '' : (string)$value;
+        return Runtime::env($key);
     }
 }
